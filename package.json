@@ -15,17 +15,17 @@
     "workflow"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/ramonmatias19/n8n-nodes-canva-improved#readme",
+  "homepage": "https://github.com/0xAF00/n8n-nodes-canva-improved#readme",
   "author": {
     "name": "Ramon Matias",
     "email": "ramonmatias19@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ramonmatias19/n8n-nodes-canva-improved.git"
+    "url": "git+https://github.com/0xAF00/n8n-nodes-canva-improved.git"
   },
   "bugs": {
-    "url": "https://github.com/ramonmatias19/n8n-nodes-canva-improved/issues"
+    "url": "https://github.com/0xAF00/n8n-nodes-canva-improved/issues"
   },
   "main": "index.js",
   "scripts": {

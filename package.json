@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-canva-improved",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Nodo mejorado de n8n para integrar Canva Connect API con OAuth 2.0 PKCE y soporte completo para diseños, exportaciones y carpetas",
   "keywords": [
     "n8n-community-node-package",
@@ -17,8 +17,8 @@
   "license": "MIT",
   "homepage": "https://github.com/0xAF00/n8n-nodes-canva-improved#readme",
   "author": {
-    "name": "Ramon Matias",
-    "email": "ramonmatias19@gmail.com"
+    "name": "Jordan R",
+    "email": "jordande1@gmail.com"
   },
   "repository": {
     "type": "git",

@@ -8,7 +8,7 @@ export class Canva implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Interactúa con la API de Canva Connect (API actualizada)',
+		description: 'Interact with Canva Connect API to create designs, manage assets, export content, and automate workflows',
 		defaults: {
 			name: 'Canva',
 		},
@@ -20,6 +20,7 @@ export class Canva implements INodeType {
 				required: true,
 			},
 		],
+		usableAsTool: true,
 		requestDefaults: {
 			baseURL: 'https://api.canva.com/rest/v1',
 			headers: {
@@ -40,42 +41,42 @@ export class Canva implements INodeType {
 					{
 						name: 'Asset',
 						value: 'assets',
-						description: 'Gestionar assets (imágenes, videos, audios)',
+						description: 'Upload and manage assets like images, videos, and audio files in Canva',
 					},
 					{
 						name: 'Autofill',
 						value: 'autofill',
-						description: 'Rellenar templates automáticamente con datos',
+						description: 'Automatically populate Canva templates with data to create multiple designs',
 					},
 					{
 						name: 'Brand Template',
 						value: 'brandTemplates',
-						description: 'Gestionar templates de marca',
+						description: 'Access and manage brand templates for consistent design creation',
 					},
 					{
 						name: 'Comment',
 						value: 'comments',
-						description: 'Gestionar comentarios en designs',
+						description: 'Add, read, and manage comments on Canva designs for collaboration',
 					},
 					{
 						name: 'Design',
 						value: 'designs',
-						description: 'Gestionar designs y templates',
+						description: 'Create, update, delete, and retrieve Canva designs (documents, presentations, whiteboards)',
 					},
 					{
 						name: 'Export',
 						value: 'exports',
-						description: 'Exportar designs en diferentes formatos',
+						description: 'Export Canva designs to various formats (PDF, PNG, JPG, MP4, GIF, PPTX)',
 					},
 					{
 						name: 'Folder',
 						value: 'folders',
-						description: 'Gestionar carpetas de organización',
+						description: 'Organize designs by creating, listing, and managing folders',
 					},
 					{
 						name: 'User',
 						value: 'users',
-						description: 'Información del usuario',
+						description: 'Get information about the authenticated Canva user profile',
 					},
 				],
 				default: 'designs',
@@ -99,7 +100,7 @@ export class Canva implements INodeType {
 						name: 'Create',
 						value: 'create',
 						action: 'Create a design',
-						description: 'Crea un nuevo design en Canva',
+						description: 'Create a new Canva design (document, presentation, or whiteboard)',
 						routing: {
 							request: {
 								method: 'POST',
@@ -111,7 +112,7 @@ export class Canva implements INodeType {
 						name: 'Get',
 						value: 'get',
 						action: 'Get a design',
-						description: 'Obtiene información de un design específico',
+						description: 'Retrieve information about a specific Canva design by ID',
 						routing: {
 							request: {
 								method: 'GET',
@@ -123,7 +124,7 @@ export class Canva implements INodeType {
 						name: 'List',
 						value: 'list',
 						action: 'List designs',
-						description: 'Lista los designs del usuario',
+						description: 'List all designs owned by the user',
 						routing: {
 							request: {
 								method: 'GET',
@@ -135,7 +136,7 @@ export class Canva implements INodeType {
 						name: 'Update',
 						value: 'update',
 						action: 'Update a design',
-						description: 'Actualiza el título de un design',
+						description: 'Update the title of a Canva design',
 						routing: {
 							request: {
 								method: 'PATCH',
@@ -147,7 +148,7 @@ export class Canva implements INodeType {
 						name: 'Delete',
 						value: 'delete',
 						action: 'Delete a design',
-						description: 'Elimina un design',
+						description: 'Permanently delete a Canva design',
 						routing: {
 							request: {
 								method: 'DELETE',
@@ -175,23 +176,23 @@ export class Canva implements INodeType {
 				},
 				options: [
 					{
-						name: 'Doc',
+						name: 'Document',
 						value: 'doc',
-						description: 'Documento de Canva',
+						description: 'Canva Document for text-rich content',
 					},
 					{
 						name: 'Whiteboard',
 						value: 'whiteboard',
-						description: 'Pizarra colaborativa',
+						description: 'Collaborative whiteboard for brainstorming',
 					},
 					{
 						name: 'Presentation',
 						value: 'presentation',
-						description: 'Presentación',
+						description: 'Presentation with slides',
 					},
 				],
 				default: 'doc',
-				description: 'Tipo de design a crear',
+				description: 'Type of design to create in Canva',
 			},
 			{
 				displayName: 'Design ID',
@@ -252,7 +253,7 @@ export class Canva implements INodeType {
 						name: 'Create Export Job',
 						value: 'createJob',
 						action: 'Create an export job',
-						description: 'Crea un trabajo de exportación asíncrono',
+						description: 'Create an asynchronous export job to export a design in various formats',
 						routing: {
 							request: {
 								method: 'POST',
@@ -264,7 +265,7 @@ export class Canva implements INodeType {
 						name: 'Get Export Job',
 						value: 'getJob',
 						action: 'Get an export job',
-						description: 'Obtiene el estado de un trabajo de exportación',
+						description: 'Get the status and download URL of an export job',
 						routing: {
 							request: {
 								method: 'GET',
@@ -331,7 +332,7 @@ export class Canva implements INodeType {
 					},
 				],
 				default: 'pdf',
-				description: 'Formato de exportación',
+				description: 'Export format for the design (PDF, PNG, JPG, GIF, PPTX, or MP4)',
 			},
 			{
 				displayName: 'Export Quality',
@@ -354,7 +355,7 @@ export class Canva implements INodeType {
 					},
 				],
 				default: 'regular',
-				description: 'Calidad de exportación',
+				description: 'Quality level for the exported file',
 			},
 			{
 				displayName: 'Paper Size',
@@ -386,7 +387,7 @@ export class Canva implements INodeType {
 					},
 				],
 				default: 'a4',
-				description: 'Tamaño de papel para PDF (solo para Canva Docs)',
+				description: 'Paper size for PDF export (only for Canva Docs)',
 			},
 			{
 				displayName: 'Pages',
@@ -400,7 +401,7 @@ export class Canva implements INodeType {
 				},
 				default: '',
 				placeholder: '1,2,3',
-				description: 'Páginas a exportar (separadas por comas). Deja vacío para exportar todas',
+				description: 'Page numbers to export (comma-separated). Leave empty to export all pages',
 			},
 			{
 				displayName: 'Export Job ID',
@@ -414,7 +415,7 @@ export class Canva implements INodeType {
 					},
 				},
 				default: '',
-				description: 'ID del trabajo de exportación',
+				description: 'The unique identifier of the export job to retrieve',
 			},
 
 			// ===================================
@@ -435,7 +436,7 @@ export class Canva implements INodeType {
 						name: 'Create',
 						value: 'create',
 						action: 'Create a folder',
-						description: 'Crea una nueva carpeta',
+						description: 'Create a new folder to organize designs',
 						routing: {
 							request: {
 								method: 'POST',
@@ -447,7 +448,7 @@ export class Canva implements INodeType {
 						name: 'List',
 						value: 'list',
 						action: 'List folders',
-						description: 'Lista las carpetas',
+						description: 'List all folders in the user account',
 						routing: {
 							request: {
 								method: 'GET',
@@ -459,7 +460,7 @@ export class Canva implements INodeType {
 						name: 'Get',
 						value: 'get',
 						action: 'Get a folder',
-						description: 'Obtiene información de una carpeta',
+						description: 'Get detailed information about a specific folder',
 						routing: {
 							request: {
 								method: 'GET',
@@ -533,7 +534,7 @@ export class Canva implements INodeType {
 						name: 'Get Profile',
 						value: 'getProfile',
 						action: 'Get user profile',
-						description: 'Obtiene el perfil del usuario actual',
+						description: 'Get the profile information of the authenticated Canva user',
 						routing: {
 							request: {
 								method: 'GET',

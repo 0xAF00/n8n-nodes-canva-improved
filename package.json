@@ -1,0 +1,67 @@
+{
+  "name": "n8n-nodes-canva-improved",
+  "version": "2.1.0",
+  "description": "Nodo mejorado de n8n para integrar Canva Connect API con OAuth 2.0 PKCE y soporte completo para diseños, exportaciones y carpetas",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "canva",
+    "canva-api",
+    "canva-connect",
+    "design",
+    "automation",
+    "oauth2",
+    "pkce",
+    "workflow"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ramonmatias19/n8n-nodes-canva-improved#readme",
+  "author": {
+    "name": "Ramon Matias",
+    "email": "ramonmatias19@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ramonmatias19/n8n-nodes-canva-improved.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ramonmatias19/n8n-nodes-canva-improved/issues"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials package.json",
+    "lintfix": "eslint nodes credentials package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/CanvaApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Canva/Canva.node.js",
+      "dist/nodes/Canva/CanvaTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.1",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "^1.54.4",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.54.4"
+  },
+  "engines": {
+    "node": ">=18.10.0"
+  }
+}

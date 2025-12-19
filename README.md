@@ -3,50 +3,67 @@
 [![NPM Version](https://img.shields.io/npm/v/n8n-nodes-canva-improved)](https://www.npmjs.com/package/n8n-nodes-canva-improved)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> Nodo mejorado de n8n para Canva Connect API con las últimas especificaciones de la API
+> Nodo mejorado de n8n para Canva Connect API con soporte REST y MCP (Model Context Protocol)
 
-Este es un nodo de comunidad de n8n que te permite integrar Canva en tus flujos de trabajo de n8n, utilizando las últimas especificaciones de la API oficial de Canva Connect.
+Este paquete incluye **2 nodos** de comunidad para n8n:
+1. **Canva (REST)**: API REST tradicional para CRUD operations
+2. **Canva MCP**: Protocolo MCP para generación de diseños con IA
 
 ## 🎯 Características Principales
 
-### ✅ Mejoras sobre la versión anterior
+### 🆕 v2.3.0 - Soporte MCP (Model Context Protocol)
+
+- **✨ Nuevo Nodo: Canva MCP** - Genera diseños completos con contenido usando IA de Canva
+- **🤖 IA Generativa**: Crea presentaciones, documentos y diseños con descripciones detalladas
+- **🎨 Múltiples candidatos**: Recibe 2-4 variantes de diseño para elegir
+- **🚀 Workflow completo**: Generate → Create → Export en un solo workflow
+
+### ✅ Mejoras sobre versiones anteriores
 
 - **API actualizada**: Implementa las últimas especificaciones de la API de Canva (Diciembre 2025)
-- **OAuth 2.0 con PKCE**: Autenticación segura y moderna
+- **OAuth 2.0 con PKCE**: Autenticación segura y moderna (REST y MCP)
 - **Endpoints simplificados**: Rutas más limpias y consistentes
 - **Mejor manejo de errores**: Respuestas más claras y útiles
-- **Tipos de design actualizados**: Solo los tipos oficialmente soportados (doc, whiteboard, presentation)
-- **Formato de exportación mejorado**: Estructura actualizada para PDF, JPG, PNG, GIF, PPTX, MP4
+- **Tipos de design actualizados**: Solo los tipos oficialmente soportados
+- **Formato de exportación mejorado**: Estructura actualizada para múltiples formatos
 
-### 📦 Recursos Soportados
+## 📦 Nodos Incluidos
 
-#### 🎨 Designs
-- ✅ **Create**: Crear nuevos designs con tipos actualizados
-- ✅ **Get**: Obtener información de un design específico
-- ✅ **List**: Listar todos tus designs
-- ✅ **Update**: Actualizar el título de un design
-- ✅ **Delete**: Eliminar un design
+### 1. 🎨 Canva (REST API)
 
-**Tipos de Design Soportados:**
-- `doc`: Documentos de Canva
-- `whiteboard`: Pizarras colaborativas
-- `presentation`: Presentaciones
+Nodo tradicional para operaciones CRUD y exportación.
 
-#### 📤 Exports
-- ✅ **Create Export Job**: Crear trabajos de exportación asíncronos
-- ✅ **Get Export Job**: Verificar el estado de exportación
+#### Recursos Soportados:
 
-**Formatos de Exportación:**
-- PDF (con opciones de tamaño de papel)
-- JPG
-- PNG
-- GIF
-- PPTX (PowerPoint)
-- MP4 (Video)
+**Designs**
+- Create, Get, List, Update, Delete
 
-**Calidades de Exportación:**
-- `regular`: Calidad estándar
-- `pro`: Calidad premium (requiere plan Canva Pro)
+**Exports**  
+- Create Export Job, Get Export Job
+- Formatos: PDF, JPG, PNG, GIF, PPTX, MP4
+
+**Folders**
+- Create, List, Get, List Items
+
+**Users**
+- Get Profile
+
+**[Ver documentación completa →](./docs/CANVA-API.md)**
+
+### 2. 🤖 Canva MCP (Model Context Protocol)
+
+**NUEVO** - Nodo para generación de diseños con IA.
+
+#### Operaciones Disponibles:
+
+- **Generate Design**: Genera diseño completo con contenido (IA)
+- **Create from Candidate**: Convierte candidato en design editable
+- **Export Design**: Exporta a PDF/PNG/JPG/etc
+- **Search Designs**: Busca diseños por keywords
+- **Get Design**: Obtiene detalles de un diseño
+- **List Brand Kits**: Lista brand kits disponibles
+
+**[Ver documentación completa →](./docs/CANVA-MCP-NODE.md)**
 
 #### 📁 Folders
 - ✅ **Create**: Crear nuevas carpetas
@@ -99,6 +116,8 @@ npm link
 
 ## 🔑 Configuración de Credenciales
 
+### Opción 1: Canva API (REST) - Para operaciones CRUD
+
 ### Paso 1: Crear una integración en Canva
 
 1. Ve al [Canva Developer Portal](https://www.canva.com/developers/)
@@ -122,23 +141,20 @@ npm link
 **⚠️ CRÍTICO**: Debes habilitar TODOS estos scopes en tu integración de Canva:
 
 ```
-app:read
-app:write
-asset:read
-asset:write
-brandtemplate:content:read
-brandtemplate:meta:read
-comment:read
-comment:write
+openid
+email
+profile
 design:content:read
 design:content:write
 design:meta:read
-design:permission:read
-design:permission:write
+asset:read
+asset:write
 folder:read
 folder:write
-folder:permission:read
-folder:permission:write
+comment:read
+comment:write
+brandtemplate:meta:read
+brandtemplate:content:read
 profile:read
 ```
 
@@ -146,16 +162,39 @@ Si falta algún scope, recibirás el error `"invalid_scope"`.
 
 ### Paso 4: Configurar en n8n
 
-1. En n8n, crea una nueva credencial "Canva API"
+1. En n8n, crea una nueva credencial **"Canva API"**
 2. Ingresa el **Client ID** de tu integración de Canva
 3. Ingresa el **Client Secret** de tu integración
 4. Haz clic en **"Connect my account"**
 5. Autoriza la aplicación en la ventana de Canva
 6. ✅ ¡Listo! n8n gestionará automáticamente los tokens
 
+---
+
+### Opción 2: Canva MCP API - Para generación con IA
+
+### Paso 1: Usar la misma App de Canva
+
+Puedes usar la misma integración creada arriba (Client ID y Secret).
+
+### Paso 2: Configurar en n8n
+
+1. En n8n, crea una nueva credencial **"Canva MCP API"**
+2. **MCP Server URL**: `https://mcp.canva.com` (default)
+3. Ingresa el **Client ID** de tu integración de Canva
+4. Ingresa el **Client Secret** de tu integración
+5. Haz clic en **"Connect my account"**
+6. Serás redirigido a `https://mcp.canva.com/authorize`
+7. Autoriza la aplicación
+8. ✅ Credencial lista para generar diseños con IA
+
+**📚 [Guía completa de MCP →](./docs/CANVA-MCP-NODE.md)**
+
 ## 💡 Ejemplos de Uso
 
-### Ejemplo 1: Crear un documento de Canva
+### REST API - Operaciones CRUD
+
+#### Ejemplo 1: Crear un documento de Canva
 
 ```json
 {
@@ -166,7 +205,7 @@ Si falta algún scope, recibirás el error `"invalid_scope"`.
 }
 ```
 
-### Ejemplo 2: Exportar un design a PDF
+#### Ejemplo 2: Exportar un design a PDF
 
 ```json
 {
@@ -179,7 +218,7 @@ Si falta algún scope, recibirás el error `"invalid_scope"`.
 }
 ```
 
-### Ejemplo 3: Verificar el estado de exportación
+#### Ejemplo 3: Verificar el estado de exportación
 
 ```json
 {
@@ -189,7 +228,7 @@ Si falta algún scope, recibirás el error `"invalid_scope"`.
 }
 ```
 
-### Ejemplo 4: Listar todos los designs
+#### Ejemplo 4: Listar todos los designs
 
 ```json
 {
@@ -197,6 +236,60 @@ Si falta algún scope, recibirás el error `"invalid_scope"`.
   "operation": "list"
 }
 ```
+
+---
+
+### MCP - Generación con IA
+
+#### Ejemplo 5: Generar una presentación con contenido
+
+```
+Operation: Generate Design
+Design Type: presentation
+Content Query:
+```
+```markdown
+**Presentation Brief**
+* **Title**: LinkedIn Authority Blueprint
+* **Topic**: Complete strategy for freelancers to generate leads on LinkedIn
+* **Key Messages**: 
+  1. Authority is built with system, not luck
+  2. Three pillars: Profile, Content, Network
+  3. 90-day practical implementation
+
+**Slide Plan**
+
+**Slide 1 — "From Invisible to Influential"**
+* **Goal**: Capture attention and establish promise
+* **Bullets**:
+  - For freelancers tired of posting into the void
+  - The proven 90-day framework to build authority
+  - Generate qualified leads while you sleep
+* **Visuals**: Split-screen: frustrated freelancer (left) → confident freelancer on call (right)
+
+[... add 7-10 more slides with detailed structure ...]
+```
+
+#### Ejemplo 6: Workflow completo de generación
+
+```
+Node 1: Canva MCP - Generate Design
+  → Returns: job_id + candidates[]
+
+Node 2: Code - Select Best Candidate
+  → Extract: candidates[0].candidate_id
+
+Node 3: Canva MCP - Create from Candidate
+  → Returns: design_id
+
+Node 4: Canva MCP - Export Design
+  → Returns: download_url
+
+Node 5: HTTP Request - Download PDF
+  → Save or send via email
+```
+
+**📚 [Ver workflows completos de MCP →](./docs/CANVA-MCP-NODE.md)**
 
 ## 🔄 Diferencias con el nodo anterior
 
@@ -255,12 +348,49 @@ Para más detalles sobre la API de Canva Connect:
 
 ¡Las contribuciones son bienvenidas! Si encuentras un bug o tienes una sugerencia:
 
-1. Abre un [issue](https://github.com/yourusername/n8n-nodes-canva-improved/issues)
+1. Abre un [issue](https://github.com/0xAF00/n8n-nodes-canva-improved/issues)
 2. Fork el repositorio
 3. Crea una rama para tu feature (`git checkout -b feature/amazing-feature`)
 4. Commit tus cambios (`git commit -m 'Add amazing feature'`)
 5. Push a la rama (`git push origin feature/amazing-feature`)
 6. Abre un Pull Request
+
+## 📝 Changelog
+
+### v2.3.0 (2025-12-19)
+
+🆕 **MCP Support**
+- Added Canva MCP node for AI-powered design generation
+- New credential: CanvaMcpApi with OAuth 2.0 PKCE
+- 6 MCP operations: generate-design, create-from-candidate, export-design, search-designs, get-design, list-brand-kits
+- Complete workflow support: Generate → Create → Export
+
+📚 **Documentation**
+- Added [CANVA-MCP-NODE.md](./docs/CANVA-MCP-NODE.md) - Complete MCP guide
+- Added [TESTING-GUIDE.md](./docs/TESTING-GUIDE.md) - Testing instructions
+- Added [ARCHITECTURE-OPTIONS.md](./docs/ARCHITECTURE-OPTIONS.md) - Decision matrix
+- Updated README with MCP examples
+
+### v2.2.0 (2025-12-18)
+
+🤖 **AI Agent Support**
+- Added `usableAsTool: true` flag for n8n AI Agents
+- Translated all descriptions to English
+- Optimized for AI workflow automation
+
+### v2.1.1 (2025-12-17)
+
+🐛 **Bug Fixes**
+- Fixed CanvaTrigger.node reference error
+
+### v2.1.0 (2025-12-16)
+
+✅ **Initial Release**
+- OAuth 2.0 with PKCE authentication
+- Design operations (CRUD)
+- Export operations (PDF, JPG, PNG, GIF, PPTX, MP4)
+- Folder operations
+- User profile operations
 
 ## 📄 Licencia
 

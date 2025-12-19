@@ -3,3 +3,6 @@ dist
 *.js
 !gulpfile.js
 !.eslintrc.js
+
+# Private prompts (not for git/npm)
+prompts/

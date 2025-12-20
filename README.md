@@ -11,12 +11,13 @@ Este paquete incluye **2 nodos** de comunidad para n8n:
 
 ## 🎯 Características Principales
 
-### 🆕 v2.3.0 - Soporte MCP (Model Context Protocol)
+### 🆕 v2.7.0 - Integración con Agentes de IA
 
-- **✨ Nuevo Nodo: Canva MCP** - Genera diseños completos con contenido usando IA de Canva
-- **🤖 IA Generativa**: Crea presentaciones, documentos y diseños con descripciones detalladas
-- **🎨 Múltiples candidatos**: Recibe 2-4 variantes de diseño para elegir
-- **🚀 Workflow completo**: Generate → Create → Export en un solo workflow
+- **🤖 Agentes de IA**: Los agentes de n8n pueden usar Canva directamente con el servidor MCP oficial
+- **🔗 Encadenamiento de nodos**: Canva MCP acepta access_token desde el nodo anterior
+- **📄 Generación con IA**: Crea presentaciones, posters, documentos completos con lenguaje natural
+- **🎨 Brand Kits**: Usa tu marca corporativa en diseños generados
+- **🔐 OAuth 2.0 PKCE**: Autenticación segura con Dynamic Client Registration
 
 ### ✅ Mejoras sobre versiones anteriores
 
@@ -27,9 +28,62 @@ Este paquete incluye **2 nodos** de comunidad para n8n:
 - **Tipos de design actualizados**: Solo los tipos oficialmente soportados
 - **Formato de exportación mejorado**: Estructura actualizada para múltiples formatos
 
+## 🚀 Inicio Rápido
+
+### Para Agentes de IA 🤖
+
+```
+1. Canva MCP Auth → Genera access_token
+2. AI Agent → Conecta a https://mcp.canva.com con el token
+3. El agente usa tools: generate-design, export-design, etc.
+4. ¡Listo! El agente genera y exporta diseños automáticamente
+```
+
+**📘 [Ver Guía de Configuración de Agentes](./AGENT_SETUP.md)**
+
+### Para Workflows Manuales 📋
+
+```
+1. Autentica con Canva MCP Auth
+2. Usa Canva MCP → Generate Design (proporciona contenido detallado)
+3. Usa Canva MCP → Create Design from Candidate (convierte a editable)
+4. Usa Canva MCP → Export Design (PDF, PNG, etc.)
+5. Descarga el archivo generado
+```
+
+**📘 [Ver Guía Completa de IA](./GUIDE_AI_DESIGN.md)** | **📦 [Workflow de Ejemplo](./examples/ai-design-to-pdf-workflow.json)**
+
 ## 📦 Nodos Incluidos
 
-### 1. 🎨 Canva (REST API)
+### 1. 🤖 Canva MCP (AI-Powered)
+
+Nodo para generación de diseños con IA y operaciones avanzadas.
+
+#### Operaciones:
+
+**Generate Design** 🎨
+- Genera diseños completos con IA usando descripciones detalladas
+- Soporta: presentations, posters, flyers, instagram_post, business_card, logo, etc.
+- Opcional: Brand Kits y Asset IDs
+
+**Create Design from Candidate** ✨
+- Convierte candidato generado en diseño editable
+- Obtén design_id para editar/exportar
+
+**Export Design** 📄
+- Exporta a PDF, PNG, JPG, PPTX, MP4
+- Configuración de calidad y tamaño de papel
+
+**Search Designs** 🔍
+- Busca diseños por keywords
+
+**Get Design** 📋
+- Obtén detalles de un diseño específico
+
+**List Brand Kits** 🎨
+- Lista tus brand kits disponibles
+
+### 2. 🎨 Canva (REST API)
 
 Nodo tradicional para operaciones CRUD y exportación.
 

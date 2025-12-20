@@ -1,0 +1,247 @@
+# 🤖 Usar Canva con Agentes de IA en n8n
+
+## 📋 Cómo Funciona
+
+El servidor MCP de Canva (`https://mcp.canva.com`) ya está listo para usar. Solo necesitas:
+
+1. **Obtener access_token** con el nodo Canva MCP Auth
+2. **Configurar el agente** para conectarse al servidor de Canva
+3. **El agente usa las herramientas** directamente
+
+## 🚀 Configuración en n8n
+
+### Paso 1: Workflow Base
+
+```
+[Canva MCP Auth] → [AI Agent] → [HTTP Request para descargar]
+```
+
+### Paso 2: Configurar AI Agent
+
+En tu nodo **AI Agent**, configura la conexión al servidor MCP de Canva:
+
+**Opción A: En la UI de n8n**
+
+1. Agrega nodo **AI Agent**
+2. En **Tools**, selecciona **MCP Tools**
+3. Configura el servidor:
+   - **Name**: `canva`
+   - **URL**: `https://mcp.canva.com/sse`
+   - **Transport**: `SSE` (Server-Sent Events)
+   - **Headers**: 
+     ```json
+     {
+       "Authorization": "Bearer {{ $('Canva MCP Auth').item.json.access_token }}"
+     }
+     ```
+
+**Opción B: JSON Configuration**
+
+```json
+{
+  "nodes": [
+    {
+      "name": "Canva MCP Auth",
+      "type": "n8n-nodes-canva-improved.canvaMcpAuth",
+      "parameters": {
+        "mcpServerUrl": "https://mcp.canva.com",
+        "autoOpenBrowser": true
+      }
+    },
+    {
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "define",
+        "text": "=Genera una presentación profesional sobre {{ $json.topic }} y expórtala como PDF",
+        "options": {
+          "tools": [
+            {
+              "name": "mcp",
+              "mcpServers": [
+                {
+                  "name": "canva",
+                  "url": "https://mcp.canva.com/sse",
+                  "transport": "sse",
+                  "authentication": {
+                    "type": "bearer",
+                    "token": "={{ $('Canva MCP Auth').item.json.access_token }}"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+## 🛠️ Herramientas Disponibles Automáticamente
+
+Una vez conectado, el agente tiene acceso a:
+
+- ✅ `generate-design` - Generar diseños con IA
+- ✅ `create-design-from-candidate` - Convertir candidato a diseño editable
+- ✅ `export-design` - Exportar a PDF, PNG, etc.
+- ✅ `search-designs` - Buscar diseños existentes
+- ✅ `get-design` - Obtener info de diseño
+- ✅ `list-brand-kits` - Listar brand kits
+
+## 💬 Ejemplo de Prompt
+
+```
+Crea una presentación profesional sobre "IA en Negocios" con estos requisitos:
+
+**Presentation Brief**
+Title: AI-Powered Business Strategy
+Topic: Cómo la inteligencia artificial transforma operaciones empresariales
+
+**Slide Plan**
+
+Slide 1 — "AI-Powered Business Strategy"
+Goal: Captar atención con estadística impactante
+Bullets:
+- Transforma tu negocio con automatización inteligente
+- Decisiones basadas en datos en tiempo real
+- ROI comprobado en múltiples industrias
+Visuals: Imagen de dashboard futurista con gráficos de IA
+Data: "30-40% reducción de costos operativos"
+
+Slide 2 — "El Desafío Actual"
+Goal: Establecer el problema que IA resuelve
+Bullets:
+- Procesos manuales consumen 60% del tiempo del equipo
+- Retrasos en decisiones por silos de datos
+- Errores humanos cuestan $500K-$2M anualmente
+- Presión competitiva en aumento
+Visuals: Comparación split-screen: workflow manual caótico vs sistema IA optimizado
+
+[... continuar con slides 3-6 ...]
+
+Usa design_type: "presentation"
+Si hay brand kit disponible, úsalo.
+Al finalizar, exporta como PDF en calidad PRO tamaño A4.
+```
+
+## 🔄 Flujo Completo del Agente
+
+El agente ejecutará automáticamente:
+
+1. **`generate-design`**
+   ```javascript
+   {
+     "design_type": "presentation",
+     "query": "contenido detallado..."
+   }
+   ```
+   → Recibe `job_id` y lista de `candidates`
+
+2. **`create-design-from-candidate`**
+   ```javascript
+   {
+     "job_id": "abc123",
+     "candidate_id": "xyz789"
+   }
+   ```
+   → Recibe `design_id`
+
+3. **`export-design`**
+   ```javascript
+   {
+     "design_id": "DAF123abc",
+     "format": {
+       "type": "pdf",
+       "export_quality": "pro",
+       "size": "a4"
+     }
+   }
+   ```
+   → Recibe URL de descarga
+
+4. **Agente responde** con la URL del PDF generado
+
+## 📦 Workflow Completo de Ejemplo
+
+```json
+{
+  "name": "Generación de Presentación con IA",
+  "nodes": [
+    {
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {}
+    },
+    {
+      "name": "Set Topic",
+      "type": "n8n-nodes-base.set",
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "topic",
+              "value": "IA en Marketing Digital"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Canva MCP Auth",
+      "type": "n8n-nodes-canva-improved.canvaMcpAuth",
+      "parameters": {
+        "mcpServerUrl": "https://mcp.canva.com"
+      }
+    },
+    {
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "parameters": {
+        "text": "=Crea una presentación profesional sobre {{ $('Set Topic').item.json.topic }} con 6 slides detallados. Usa el formato de Presentation Brief con títulos exactos, bullets específicos, y descripciones de visuales. Exporta como PDF en calidad PRO.",
+        "options": {
+          "mcpServers": [
+            {
+              "name": "canva",
+              "url": "https://mcp.canva.com/sse",
+              "transport": "sse",
+              "headers": {
+                "Authorization": "=Bearer {{ $('Canva MCP Auth').item.json.access_token }}"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+## 🔧 Troubleshooting
+
+### Error: "Unauthorized" o "401"
+**Causa**: Token inválido o expirado
+**Solución**: Re-ejecuta el nodo Canva MCP Auth para obtener un token fresco
+
+### Error: "Server not reachable"
+**Causa**: URL incorrecta o problemas de red
+**Solución**: Verifica que la URL sea `https://mcp.canva.com/sse` (con `/sse`)
+
+### El agente no encuentra las herramientas
+**Causa**: Autenticación incorrecta
+**Solución**: Verifica que el header Authorization tenga el formato: `Bearer YOUR_TOKEN`
+
+### Error: "Common queries will not be generated"
+**Causa**: Prompt demasiado vago
+**Solución**: Proporciona contenido detallado con el formato Presentation Brief
+
+## 📚 Recursos
+
+- [Guía Completa de Generación con IA](./GUIDE_AI_DESIGN.md)
+- [Canva MCP Documentation](https://www.canva.dev/docs/mcp/)
+- [n8n AI Agents](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/)
+
+---
+
+**Lo importante**: NO necesitas crear ningún servidor. Canva ya lo provee en `https://mcp.canva.com`. Solo conecta tu agente con el token de autenticación. 🎉

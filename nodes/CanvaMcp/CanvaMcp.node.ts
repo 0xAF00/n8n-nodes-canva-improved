@@ -19,7 +19,7 @@ export class CanvaMcp implements INodeType {
 		credentials: [
 			{
 				name: 'canvaMcpApi',
-				required: true,
+				required: false,
 			},
 		],
 		properties: [
@@ -272,27 +272,47 @@ export class CanvaMcp implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 		const operation = this.getNodeParameter('operation', 0) as string;
 
-		// Get credentials
-		const credentials = await this.getCredentials('canvaMcpApi') as any;
-		const mcpServerUrl = (credentials.mcpServerUrl as string) || 'https://mcp.canva.com';
+		// Get MCP Server URL from credentials or use default
+		let mcpServerUrl = 'https://mcp.canva.com';
+		let accessToken: string | undefined;
 		
-		// Extract OAuth token
-		let accessToken: string;
-		if (credentials.oauthTokenData) {
-			// OAuth flow completed
-			const oauthData = credentials.oauthTokenData as any;
+		try {
+			const credentials = await this.getCredentials('canvaMcpApi') as any;
+			mcpServerUrl = (credentials.mcpServerUrl as string) || mcpServerUrl;
+			
+			// Try to get token from credentials
+			if (credentials.oauthTokenData) {
+				const oauthData = credentials.oauthTokenData as any;
+				accessToken = oauthData.access_token;
+			}
+		} catch (error) {
+			// Credentials not configured, will try to get token from input data
+			this.logger.info('No credentials configured, expecting access_token from input data');
+		}
+
+		// If no token from credentials, try to get from first input item
+		if (!accessToken && items.length > 0 && items[0].json.access_token) {
+			accessToken = items[0].json.access_token as string;
+			this.logger.info('Using access_token from input data');
+		}
+
+		// If still no token, check for oauthTokenData in input
+		if (!accessToken && items.length > 0 && items[0].json.oauthTokenData) {
+			const oauthData = items[0].json.oauthTokenData as any;
 			accessToken = oauthData.access_token;
-		} else {
-			throw new Error(
-				'OAuth authentication required. Please connect your Canva account in the credential configuration.'
-			);
+			this.logger.info('Using access_token from input oauthTokenData');
 		}
 
 		if (!accessToken) {
-			throw new Error('Access token is empty. Please re-authenticate with Canva MCP.');
+			throw new Error(
+				'Access token not found. Please either:\n' +
+				'1. Connect Canva MCP Auth node before this node, OR\n' +
+				'2. Configure Canva MCP API credentials with OAuth authentication'
+			);
 		}
 
-		// Log for debugging (remove in production)
+		// Log for debugging
+
 		this.logger.info(`Connecting to Canva MCP at ${mcpServerUrl}`);
 		this.logger.info(`Access token length: ${accessToken.length}`);
 

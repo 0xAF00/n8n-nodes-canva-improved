@@ -1,0 +1,203 @@
+{
+  "name": "Canva AI Design → PDF",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [240, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "generateDesign",
+        "designType": "presentation",
+        "contentQuery": "=**Presentation Brief**\nTitle: AI-Powered Business Strategy\nTopic: How artificial intelligence is transforming modern business operations\nKey Messages:\n- AI reduces operational costs by 30-40%\n- Machine learning improves decision accuracy\n- Automation frees teams for strategic work\n- Data-driven insights enable competitive advantage\n\n**Narrative Arc**\nStart with the business problem (manual processes, inefficiency), introduce AI as the solution, show real-world success metrics, present implementation roadmap, and close with a clear call to action for digital transformation.\n\n**Slide Plan**\n\nSlide 1 — \"AI-Powered Business Strategy\"\nGoal: Hook the audience with a bold visual and set expectations\nBullets:\n- Transform your business with intelligent automation\n- Data-driven decisions in real-time\n- Proven ROI across industries\nVisuals: Full-bleed image of futuristic AI dashboard with graphs\nData: Show \"30-40% cost reduction\" as hero stat\nSpeaker Notes: Welcome audience, establish credibility, preview key benefits\nTransition: But first, let's understand the current challenges businesses face\n\nSlide 2 — \"The Business Challenge\"\nGoal: Establish the problem that AI solves\nBullets:\n- Manual processes consume 60% of employee time\n- Decision delays due to data silos\n- Human error costs $500K-$2M annually\n- Competitive pressure increasing\nVisuals: Split-screen comparison: chaotic manual workflow vs streamlined AI system\nData: Use actual research stats from McKinsey 2024 report\nSpeaker Notes: Reference specific pain points the audience faces\nTransition: This is where AI becomes a game-changer\n\nSlide 3 — \"How AI Transforms Operations\"\nGoal: Show concrete AI capabilities\nBullets:\n- Process automation (RPA + ML)\n- Predictive analytics for forecasting\n- Natural language processing for customer service\n- Computer vision for quality control\nVisuals: 2×2 matrix showing AI capabilities by business function\nData: Map each bullet to specific ROI percentage\nSpeaker Notes: Provide real customer examples for each capability\nTransition: Let's look at the measurable impact\n\nSlide 4 — \"Proven Results\"\nGoal: Build credibility with real metrics\nBullets:\n- 35% cost reduction (Company A - Manufacturing)\n- 50% faster decision-making (Company B - Finance)\n- 90% accuracy in predictions (Company C - Retail)\n- 24/7 customer service availability\nVisuals: Clustered bar chart comparing before/after metrics\nData: Use anonymized real client data\nSpeaker Notes: Tell brief success story for each metric\nTransition: Here's your roadmap to achieve similar results\n\nSlide 5 — \"Implementation Roadmap\"\nGoal: Make AI adoption feel achievable\nBullets:\n- Phase 1 (Months 1-3): Assessment & pilot\n- Phase 2 (Months 4-6): Deployment & training\n- Phase 3 (Months 7-12): Optimization & scaling\n- Ongoing: Continuous improvement\nVisuals: Timeline swimlane diagram with milestones\nData: Show investment per phase and expected ROI timeline\nSpeaker Notes: Address common concerns about complexity and cost\nTransition: Let's take the next step together\n\nSlide 6 — \"Next Steps\"\nGoal: Clear call to action\nBullets:\n- Schedule a free AI readiness assessment\n- Receive customized ROI projection\n- Join our next implementation workshop\n- Contact: info@yourcompany.com\nVisuals: Clean contact card with QR code\nData: Workshop dates and contact details\nSpeaker Notes: Thank audience, invite questions, provide follow-up resources\nTransition: End with confidence and availability for Q&A"
+      },
+      "id": "generate",
+      "name": "Generate Design with AI",
+      "type": "n8n-nodes-canva-improved.canvaMcp",
+      "position": [440, 300],
+      "typeVersion": 1,
+      "credentials": {
+        "canvaMcpApi": {
+          "id": "1",
+          "name": "Canva MCP API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "job_id",
+              "value": "={{ $json.content[0].text.split('job_id: ')[1].split('\\n')[0] }}"
+            },
+            {
+              "name": "candidate_id",
+              "value": "={{ $json.content[0].text.split('candidate_id: ')[1].split('\\n')[0] }}"
+            },
+            {
+              "name": "preview_url",
+              "value": "={{ $json.content[0].text.split('preview: ')[1].split('\\n')[0] }}"
+            }
+          ]
+        }
+      },
+      "id": "extract",
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.set",
+      "position": [640, 300],
+      "typeVersion": 1,
+      "notes": "Parse the generate-design response to extract job_id and candidate_id"
+    },
+    {
+      "parameters": {
+        "operation": "createFromCandidate",
+        "jobId": "={{ $json.job_id }}",
+        "candidateId": "={{ $json.candidate_id }}"
+      },
+      "id": "create",
+      "name": "Create Design from Candidate",
+      "type": "n8n-nodes-canva-improved.canvaMcp",
+      "position": [840, 300],
+      "typeVersion": 1,
+      "credentials": {
+        "canvaMcpApi": {
+          "id": "1",
+          "name": "Canva MCP API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "design_id",
+              "value": "={{ $json.content[0].text.split('design_id: ')[1].split('\\n')[0] }}"
+            }
+          ]
+        }
+      },
+      "id": "extractDesignId",
+      "name": "Extract Design ID",
+      "type": "n8n-nodes-base.set",
+      "position": [1040, 300],
+      "typeVersion": 1,
+      "notes": "Extract the design_id from the created design"
+    },
+    {
+      "parameters": {
+        "operation": "exportDesign",
+        "designId": "={{ $json.design_id }}",
+        "exportFormat": "pdf",
+        "exportQuality": "pro",
+        "paperSize": "a4"
+      },
+      "id": "export",
+      "name": "Export as PDF",
+      "type": "n8n-nodes-canva-improved.canvaMcp",
+      "position": [1240, 300],
+      "typeVersion": 1,
+      "credentials": {
+        "canvaMcpApi": {
+          "id": "1",
+          "name": "Canva MCP API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "download_url",
+              "value": "={{ $json.content[0].text.split('url: ')[1].split('\\n')[0] }}"
+            },
+            {
+              "name": "status",
+              "value": "✅ PDF generated successfully!"
+            }
+          ]
+        }
+      },
+      "id": "result",
+      "name": "Final Result",
+      "type": "n8n-nodes-base.set",
+      "position": [1440, 300],
+      "typeVersion": 1,
+      "notes": "Extract the download URL for the PDF"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Design with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Design with AI": {
+      "main": [
+        [
+          {
+            "node": "Extract IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IDs": {
+      "main": [
+        [
+          {
+            "node": "Create Design from Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Design from Candidate": {
+      "main": [
+        [
+          {
+            "node": "Extract Design ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Design ID": {
+      "main": [
+        [
+          {
+            "node": "Export as PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export as PDF": {
+      "main": [
+        [
+          {
+            "node": "Final Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

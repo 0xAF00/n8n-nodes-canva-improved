@@ -64,9 +64,15 @@ Una vez conectado, el agente tiene acceso a:
 - ✅ `get-design` - Obtener info de diseño
 - ✅ `list-brand-kits` - Listar brand kits
 
-## 💬 Ejemplo de Prompt
+## 💬 Ejemplos de Prompts
+
+### Ejemplo 1: Presentación Completa (Recomendado)
 
 ```
+IMPORTANTE: Debes llamar a la herramienta generate-design con estos parámetros OBLIGATORIOS:
+- design_type: "presentation"
+- query: Un string con TODO el contenido detallado de la presentación
+
 Crea una presentación profesional sobre "IA en Negocios" con estos requisitos:
 
 **Presentation Brief**
@@ -98,6 +104,66 @@ Visuals: Comparación split-screen: workflow manual caótico vs sistema IA optim
 Usa design_type: "presentation"
 Si hay brand kit disponible, úsalo.
 Al finalizar, exporta como PDF en calidad PRO tamaño A4.
+```
+
+### Ejemplo 2: Prompt Simplificado (Para Testing)
+
+```
+Usa la herramienta generate-design con estos parámetros exactos:
+
+design_type: "presentation"
+
+query: "**Presentation Brief**
+Title: IA en Negocios
+Topic: Transformación digital con inteligencia artificial
+
+**Slide Plan**
+
+Slide 1 — Título Principal
+Goal: Introducir el tema
+Bullets:
+- IA transforma operaciones
+- Reduce costos 30-40%
+- Mejora toma de decisiones
+Visuals: Dashboard moderno con gráficos
+
+Slide 2 — Beneficios Clave
+Goal: Mostrar ventajas
+Bullets:
+- Automatización de procesos
+- Análisis predictivo
+- Atención 24/7
+Visuals: Íconos de beneficios
+
+Slide 3 — Casos de Éxito
+Goal: Credibilidad con ejemplos
+Bullets:
+- Empresa A: 35% reducción costos
+- Empresa B: 50% más rápido
+- Empresa C: 90% precisión
+Visuals: Gráfico de barras comparativo"
+
+Luego toma el primer candidato (candidate_id del resultado), conviértelo a diseño con create-design-from-candidate, y finalmente exporta como PDF con export-design.
+```
+
+### Ejemplo 3: Poster Simple
+
+```
+Llama a generate-design con:
+- design_type: "poster"
+- query: "Poster moderno para cafetería. Título: Fresh Coffee Daily. Subtítulo: Granos artesanales de Colombia. Horario: Lun-Vie 7AM-6PM. Visual: Taza de café con latte art. Colores cálidos marrón y crema."
+
+Después convierte el primer candidato y expórtalo como PDF.
+```
+
+### Ejemplo 4: Instagram Post
+
+```
+Genera un Instagram post usando generate-design:
+- design_type: "instagram_post"
+- query: "Post sobre IA en negocios. Mensaje principal: IA aumenta productividad 40%. Stats: 24/7 disponible, tiempo real, automatización. Estilo: tipografía bold, gradiente púrpura a azul, moderno."
+
+Convierte y exporta como PNG.
 ```
 
 ## 🔄 Flujo Completo del Agente
@@ -194,6 +260,18 @@ El agente ejecutará automáticamente:
 
 ## 🔧 Troubleshooting
 
+### Error: "Invalid arguments for tool generate-design: query Required"
+**Causa**: El agente no está pasando el parámetro `query` correctamente
+**Solución**: 
+1. Sé muy específico en tu prompt: "Usa generate-design con design_type: 'presentation' y query: '...'"
+2. Dale el contenido completo en el prompt, no esperes que el agente lo genere
+3. Ejemplo de prompt correcto:
+   ```
+   Llama a generate-design con estos parámetros EXACTOS:
+   design_type: "poster"
+   query: "Poster de cafetería. Título: Fresh Coffee. Horario: 7AM-6PM. Visual: taza con latte art."
+   ```
+
 ### Error: "Unauthorized" o "401"
 **Causa**: Token inválido o expirado
 **Solución**: Re-ejecuta el nodo Canva MCP Auth para obtener un token fresco
@@ -202,13 +280,17 @@ El agente ejecutará automáticamente:
 **Causa**: URL incorrecta o problemas de red
 **Solución**: Verifica que la URL sea `https://mcp.canva.com/sse` (con `/sse`)
 
-### El agente no encuentra las herramientas
-**Causa**: Autenticación incorrecta
-**Solución**: Verifica que el header Authorization tenga el formato: `Bearer YOUR_TOKEN`
+### El agente llama a la herramienta pero falla
+**Causa**: Parámetros incorrectos o faltantes
+**Solución**: 
+1. Especifica TODOS los parámetros requeridos en tu prompt
+2. Para `generate-design`: `design_type` y `query` son OBLIGATORIOS
+3. Para `create-design-from-candidate`: `job_id` y `candidate_id` son OBLIGATORIOS
+4. Para `export-design`: `design_id` y `format.type` son OBLIGATORIOS
 
 ### Error: "Common queries will not be generated"
-**Causa**: Prompt demasiado vago
-**Solución**: Proporciona contenido detallado con el formato Presentation Brief
+**Causa**: El `query` es demasiado vago
+**Solución**: Proporciona contenido MUY detallado con el formato Presentation Brief (títulos exactos, bullets, visuales, datos)
 
 ## 📚 Recursos
 

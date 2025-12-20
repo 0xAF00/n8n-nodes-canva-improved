@@ -4,7 +4,29 @@ dist
 !gulpfile.js
 !.eslintrc.js
 
-# Private prompts (not for git/npm)
+# Private prompts and business logic (CONFIDENCIAL)
 prompts/
 
+# Deployment and server-specific documentation (CONFIDENCIAL)
 DEPLOYMENT.md
+SECURITY.md
+
+# Internal architecture and testing docs (CONFIDENCIAL)
+docs/
+TESTING.md
+QUICKSTART.md
+COMPARISON.md
+AGENT_SETUP.md
+GUIDE_AI_DESIGN.md
+README-FULL.md
+
+# Development artifacts
+test-callback.js
+*.tgz
+*.log
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

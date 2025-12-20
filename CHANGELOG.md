@@ -2,6 +2,60 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## [3.0.0] - 2025-12-20 🎉 VERSIÓN ESTABLE
+
+### 🚀 Características Principales
+
+#### Integración completa con AI Agents
+- ✅ **Canva MCP Auth**: Autenticación OAuth 2.0 con Dynamic Client Registration
+- ✅ **Canva MCP**: Soporte completo para herramientas MCP (generate-design, export-design, etc.)
+- ✅ **AI Agent Ready**: Funciona perfectamente con n8n AI Agent usando Bearer Auth
+- ✅ **Chaining Support**: Los nodos aceptan access_token desde el nodo anterior
+
+#### Generación de Diseños con IA
+- ✅ `generate-design`: Crea presentaciones, posters, documentos completos con IA
+- ✅ `create-design-from-candidate`: Convierte diseños generados en editables
+- ✅ `export-design`: Exporta a PDF, PNG, JPG con calidad PRO
+- ✅ `search-designs`, `get-design`, `list-brand-kits`: Herramientas adicionales
+
+#### Sistema de Prompts Premium
+- ✅ Prompts actualizados para infoproductos de alto valor
+- ✅ Formato correcto para herramientas MCP
+- ✅ Ejemplos completos de generación de PDFs profesionales
+- ✅ Guías de configuración para AI Agents
+
+#### Documentación Completa
+- 📘 [AGENT_SETUP.md](./AGENT_SETUP.md): Configuración paso a paso para AI Agents
+- 📘 [GUIDE_AI_DESIGN.md](./GUIDE_AI_DESIGN.md): Guía completa de generación con IA
+- 📘 Ejemplos de workflows y prompts actualizados
+- 📘 Troubleshooting detallado
+
+### 🔧 Correcciones Críticas
+- ✅ **v2.6.8**: Resuelto ERR_EMPTY_RESPONSE (servidor escucha en todas las interfaces)
+- ✅ **v2.7.0**: Canva MCP acepta access_token desde input data
+- ✅ **v2.7.2**: Configuración correcta para MCP Tool en AI Agent
+
+### 📦 Lo que incluye esta versión
+
+**3 Nodos principales:**
+1. **Canva MCP Auth**: Autenticación OAuth con Dynamic Client Registration
+2. **Canva MCP**: Operaciones con IA (generate, export, search, etc.)
+3. **Canva (REST)**: API REST tradicional para CRUD
+
+**Flujo recomendado:**
+```
+Canva MCP Auth → AI Agent (con MCP Tool) → PDF generado automáticamente
+```
+
+### 🎯 Casos de Uso
+- ✅ Generar infoproductos profesionales con IA
+- ✅ Crear presentaciones completas desde descripción
+- ✅ Exportar diseños como PDF de alta calidad
+- ✅ Automatizar creación de contenido visual
+- ✅ Integración con workflows de n8n
+
+---
+
 ## [2.1.0] - 2025-12-17
 
 ### 🎯 Mejoras Principales

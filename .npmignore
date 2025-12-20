@@ -1,0 +1,47 @@
+# Source files (only include compiled dist/)
+*.ts
+!*.d.ts
+tsconfig.json
+.prettierrc
+.eslintrc.js
+gulpfile.js
+
+# Private prompts and business logic (CONFIDENCIAL)
+prompts/
+
+# Internal documentation (CONFIDENCIAL)
+docs/
+DEPLOYMENT.md
+TESTING.md
+QUICKSTART.md
+COMPARISON.md
+AGENT_SETUP.md
+GUIDE_AI_DESIGN.md
+README-FULL.md
+
+# Development artifacts
+test-callback.js
+*.tgz
+*.log
+examples/
+
+# Git files
+.git/
+.gitignore
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Only include these files in npm package:
+# - dist/ (compiled code)
+# - README.md (simplified public readme)
+# - LICENSE
+# - CHANGELOG.md
+# - CONTRIBUTING.md (basic contribution guide)
+# - package.json

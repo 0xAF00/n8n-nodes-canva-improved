@@ -207,29 +207,25 @@ export class CanvaMcpAuth implements INodeType {
 				const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
 				// Temporarily disabled until Canva authorizes public domains
 				// const publicCallbackUrl = this.getNodeParameter('publicCallbackUrl', i) as string || '';
-				const publicCallbackUrl: string = ''; // Force localhost for now
-				const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
-					const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
+			const publicCallbackUrl: string = ''; // Force localhost for now
+			const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
+				const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
 
-					// Build callback URL
-					let callbackUrl: string;
-					let serverHost: string;
-					let actualPort: number;
+				// Build callback URL
+				let callbackUrl: string;
+				let actualPort: number;
 
-					if (publicCallbackUrl) {
-						// Public server mode
-						callbackUrl = `${publicCallbackUrl.replace(/\/$/, '')}/oauth/callback`;
-						serverHost = '0.0.0.0'; // Listen on all interfaces
-						actualPort = callbackPort;
-						this.logger.info(`🌐 Public server mode: ${callbackUrl}`);
-					} else {
-						// Localhost mode
-						callbackUrl = `http://localhost:${callbackPort}/oauth/callback`;
-						serverHost = '127.0.0.1'; // Only localhost
-						actualPort = callbackPort;
-						this.logger.info(`🏠 Localhost mode: ${callbackUrl}`);
-					}
-
+				if (publicCallbackUrl) {
+					// Public server mode
+					callbackUrl = `${publicCallbackUrl.replace(/\/$/, '')}/oauth/callback`;
+					actualPort = callbackPort;
+					this.logger.info(`🌐 Public server mode: ${callbackUrl}`);
+				} else {
+					// Localhost mode
+					callbackUrl = `http://localhost:${callbackPort}/oauth/callback`;
+					actualPort = callbackPort;
+					this.logger.info(`🏠 Localhost mode: ${callbackUrl}`);
+				}
 					// Step 1: Get client credentials (manual or dynamic registration)
 					let clientId: string;
 					let clientSecret: string;
@@ -374,13 +370,13 @@ export class CanvaMcpAuth implements INodeType {
 
 							closeServer();
 							resolve({
-									access_token: tokenData.access_token,
-									refresh_token: tokenData.refresh_token,
-									expires_in: tokenData.expires_in,
-									token_type: tokenData.token_type,
-									scope: tokenData.scope,
-									expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
-								});
+								access_token: tokenData.access_token,
+								refresh_token: tokenData.refresh_token,
+								expires_in: tokenData.expires_in,
+								token_type: tokenData.token_type,
+								scope: tokenData.scope,
+								expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
+							});
 						} catch (error) {
 							this.logger.error(`❌ Token exchange error: ${error}`);
 							res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -396,15 +392,15 @@ export class CanvaMcpAuth implements INodeType {
 				});
 
 				// Track connections for force close
-				server.on('connection', (conn: any) => {
-					connections.add(conn);
-					conn.on('close', () => {
-						connections.delete(conn);
-					});
+			server.on('connection', (conn: any) => {
+				connections.add(conn);
+				conn.on('close', () => {
+					connections.delete(conn);
 				});
+			});
 
-				server.listen(actualPort, serverHost, () => {
-					const address = server.address();
+			server.listen(actualPort, () => {
+				const address = server.address();
 					const listenPort = typeof address === 'object' && address ? address.port : actualPort;
 
 					// MCP only requires OpenID Connect scopes
@@ -421,10 +417,10 @@ export class CanvaMcpAuth implements INodeType {
 					authUrl.searchParams.set('code_challenge_method', 'S256');
 					authUrl.searchParams.set('redirect_uri', callbackUrl);
 					authUrl.searchParams.set('state', state);
-					authUrl.searchParams.set('scope', scopes.join(' '));
+				authUrl.searchParams.set('scope', scopes.join(' '));
 
-					this.logger.info(`🔐 OAuth callback server running on ${serverHost}:${listenPort}`);
-					this.logger.info(`📍 Callback URL: ${callbackUrl}`);
+				this.logger.info(`🔐 OAuth callback server running on port ${listenPort}`);
+				this.logger.info(`📍 Callback URL: ${callbackUrl}`);
 					this.logger.info(`🔌 MCP Server: ${mcpServerUrl} (endpoint: /${mcpEndpoint})`);
 					this.logger.info(`🌐 Please authorize this client by visiting:`);
 					this.logger.info(authUrl.toString());

@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.1';
+const N8N_MCP_VERSION = '2.6.2';
 
 interface RegisteredClient {
 	client_id: string;
@@ -259,11 +259,19 @@ export class CanvaMcpAuth implements INodeType {
 					const tokenResult = await new Promise<any>((resolve, reject) => {
 						let timeoutId: NodeJS.Timeout | null = null;
 						let serverClosed = false;
+						const connections = new Set<any>();
 
 						const closeServer = () => {
 							if (!serverClosed) {
 								serverClosed = true;
 								if (timeoutId) clearTimeout(timeoutId);
+								
+								// Force close all active connections
+								for (const conn of connections) {
+									conn.destroy();
+								}
+								connections.clear();
+								
 								server.close(() => {
 									this.logger.info('🔒 OAuth callback server closed');
 								});
@@ -364,9 +372,17 @@ export class CanvaMcpAuth implements INodeType {
 								res.writeHead(404);
 								res.end('Not found');
 							}
-						});
+					});
 
-				server.listen(actualPort, serverHost, () => {
+			// Track connections for force close
+			server.on('connection', (conn: any) => {
+				connections.add(conn);
+				conn.on('close', () => {
+					connections.delete(conn);
+				});
+			});
+
+			server.listen(actualPort, serverHost, () => {
 					const address = server.address();
 					const listenPort = typeof address === 'object' && address ? address.port : actualPort;
 

@@ -6,3 +6,5 @@ dist
 
 # Private prompts (not for git/npm)
 prompts/
+
+DEPLOYMENT.md

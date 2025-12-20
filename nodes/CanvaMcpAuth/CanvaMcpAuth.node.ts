@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.5';
+const N8N_MCP_VERSION = '2.6.6';
 
 interface RegisteredClient {
 	client_id: string;
@@ -393,15 +393,17 @@ export class CanvaMcpAuth implements INodeType {
 						res.writeHead(404);
 						res.end('Not found');
 					}
-				});			// Track connections for force close
-			server.on('connection', (conn: any) => {
-				connections.add(conn);
-				conn.on('close', () => {
-					connections.delete(conn);
 				});
-			});
 
-			server.listen(actualPort, serverHost, () => {
+				// Track connections for force close
+				server.on('connection', (conn: any) => {
+					connections.add(conn);
+					conn.on('close', () => {
+						connections.delete(conn);
+					});
+				});
+
+				server.listen(actualPort, serverHost, () => {
 					const address = server.address();
 					const listenPort = typeof address === 'object' && address ? address.port : actualPort;
 

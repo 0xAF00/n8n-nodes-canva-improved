@@ -174,9 +174,12 @@ export class CanvaMcpAuth implements INodeType {
 									return;
 						}
 
-						// Exchange code for token
-						try {
-							const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
+					// Exchange code for token
+					try {
+						this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
+						this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
+						
+						const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
 								method: 'POST',
 									headers: {
 										'Content-Type': 'application/x-www-form-urlencoded',

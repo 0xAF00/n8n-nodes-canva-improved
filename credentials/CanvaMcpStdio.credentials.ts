@@ -23,8 +23,8 @@ export class CanvaMcpStdio implements ICredentialType {
 			name: 'clientId',
 			type: 'string',
 			default: '',
-			description: 'The Client ID from your Canva app',
-			required: true,
+			description: '(Optional) Manual Client ID from Canva Developer Console. Leave empty to use automatic Dynamic Client Registration.',
+			required: false,
 		},
 		{
 			displayName: 'Client Secret',
@@ -34,8 +34,8 @@ export class CanvaMcpStdio implements ICredentialType {
 				password: true,
 			},
 			default: '',
-			description: 'The Client Secret from your Canva app',
-			required: true,
+			description: '(Optional) Manual Client Secret. Only needed if using manual Client ID.',
+			required: false,
 		},
 		{
 			displayName: 'Access Token',

@@ -9,6 +9,72 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import { exec } from 'node:child_process';
 
+// Software ID for Dynamic Client Registration (persistent across installations)
+const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
+const N8N_MCP_VERSION = '2.5.0';
+
+interface RegisteredClient {
+	client_id: string;
+	client_secret?: string;
+	redirect_uris: string[];
+	token_endpoint_auth_method?: string;
+	grant_types?: string[];
+}
+
+// Store registered clients per server URL in memory
+const registeredClients = new Map<string, RegisteredClient>();
+
+/**
+ * Register client dynamically with OAuth server
+ */
+async function registerClient(
+	mcpServerUrl: string,
+	callbackPort: number,
+	logger: any
+): Promise<RegisteredClient> {
+	// Check if already registered
+	const cached = registeredClients.get(mcpServerUrl);
+	if (cached) {
+		logger.info('♻️ Using cached client registration');
+		return cached;
+	}
+
+	logger.info('📝 Registering new OAuth client with Canva MCP...');
+
+	const registrationData = {
+		redirect_uris: [`http://localhost:${callbackPort}/oauth/callback`],
+		token_endpoint_auth_method: 'none', // Public client (no secret)
+		grant_types: ['authorization_code', 'refresh_token'],
+		response_types: ['code'],
+		client_name: 'n8n MCP Client',
+		client_uri: 'https://n8n.io',
+		software_id: N8N_MCP_SOFTWARE_ID,
+		software_version: N8N_MCP_VERSION,
+		scope: 'openid email profile',
+	};
+
+	const response = await fetch(`${mcpServerUrl}/register`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(registrationData),
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Client registration failed: ${response.status} ${errorText}`);
+	}
+
+	const registered = await response.json() as RegisteredClient;
+	logger.info(`✅ Client registered: ${registered.client_id}`);
+
+	// Cache it
+	registeredClients.set(mcpServerUrl, registered);
+
+	return registered;
+}
+
 export class CanvaMcpAuth implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Canva MCP Auth',
@@ -114,33 +180,46 @@ export class CanvaMcpAuth implements INodeType {
 		
 		const credentials = await this.getCredentials('canvaMcpStdio') as any;
 		const mcpServerUrl = credentials.mcpServerUrl || 'https://mcp.canva.com';
-		const clientId = credentials.clientId;
-		const clientSecret = credentials.clientSecret;
-
-		if (!clientId || !clientSecret) {
-			throw new NodeOperationError(
-				this.getNode(),
-				'Client ID and Client Secret are required in the credential'
-			);
-		}
+		
+		// Check if manual credentials are provided
+		const manualClientId = credentials.clientId;
+		const manualClientSecret = credentials.clientSecret;
 
 		for (let i = 0; i < items.length; i++) {
-			try {
-				if (operation === 'authenticate') {
-					const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
-					
-					// Generate PKCE challenge
-					const codeVerifier = crypto.randomBytes(32).toString('base64url');
-					const codeChallenge = crypto
-						.createHash('sha256')
-						.update(codeVerifier)
-						.digest('base64url');
+				try {
+					if (operation === 'authenticate') {
+						const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
+						const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
+						const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
 
-					const state = crypto.randomUUID();
-					const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
-					const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
+						// Step 1: Get client credentials (manual or dynamic registration)
+						let clientId: string;
+						let clientSecret: string;
 
-					// Create local OAuth callback server
+						if (manualClientId) {
+							// Use manual credentials if provided
+							this.logger.info('🔑 Using manual Client ID from credentials');
+							clientId = manualClientId;
+							clientSecret = manualClientSecret || '';
+						} else {
+							// Use Dynamic Client Registration
+							const registeredClient = await registerClient(
+								mcpServerUrl,
+								callbackPort,
+								this.logger
+							);
+							clientId = registeredClient.client_id;
+							clientSecret = registeredClient.client_secret || '';
+						}
+						
+						// Step 2: Generate PKCE challenge
+						const codeVerifier = crypto.randomBytes(32).toString('base64url');
+						const codeChallenge = crypto
+							.createHash('sha256')
+							.update(codeVerifier)
+							.digest('base64url');
+
+						const state = crypto.randomUUID();					// Create local OAuth callback server
 					const tokenResult = await new Promise<any>((resolve, reject) => {
 						const server = http.createServer(async (req: any, res: any) => {
 							const url = new URL(req.url!, `http://localhost:${actualPort}`);
@@ -179,22 +258,27 @@ export class CanvaMcpAuth implements INodeType {
 						this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
 						this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
 						
+						// Build token request params (only include client_secret if present)
+						const tokenParams: Record<string, string> = {
+							grant_type: 'authorization_code',
+							client_id: clientId,
+							code: code,
+							code_verifier: codeVerifier,
+							redirect_uri: `http://localhost:${actualPort}/oauth/callback`,
+						};
+
+						// Only add client_secret if it exists (public clients don't have secrets)
+						if (clientSecret) {
+							tokenParams.client_secret = clientSecret;
+						}
+						
 						const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
 								method: 'POST',
 									headers: {
 										'Content-Type': 'application/x-www-form-urlencoded',
 									},
-									body: new URLSearchParams({
-											grant_type: 'authorization_code',
-											client_id: clientId,
-											client_secret: clientSecret,
-											code: code,
-											code_verifier: codeVerifier,
-											redirect_uri: `http://localhost:${actualPort}/oauth/callback`,
-										}),
-									});
-
-									if (!tokenResponse.ok) {
+									body: new URLSearchParams(tokenParams),
+								});									if (!tokenResponse.ok) {
 								const errorText = await tokenResponse.text();
 								throw new Error(`Token exchange failed: ${errorText}`);
 							}
@@ -292,6 +376,7 @@ export class CanvaMcpAuth implements INodeType {
 					pairedItem: { item: i },
 				});				} else if (operation === 'refresh') {
 					const refreshToken = credentials.refreshToken;
+					const callbackPort = 29865; // Use default for registration
 					
 					if (!refreshToken) {
 					throw new NodeOperationError(
@@ -300,17 +385,40 @@ export class CanvaMcpAuth implements INodeType {
 					);
 				}
 
+					// Get client credentials (manual or dynamic)
+					let clientId: string;
+					let clientSecret: string;
+
+					if (manualClientId) {
+						this.logger.info('🔑 Using manual Client ID for refresh');
+						clientId = manualClientId;
+						clientSecret = manualClientSecret || '';
+					} else {
+						const registeredClient = await registerClient(
+							mcpServerUrl,
+							callbackPort,
+							this.logger
+						);
+						clientId = registeredClient.client_id;
+						clientSecret = registeredClient.client_secret || '';
+					}
+
+					const refreshParams: Record<string, string> = {
+						grant_type: 'refresh_token',
+						client_id: clientId,
+						refresh_token: refreshToken,
+					};
+
+					if (clientSecret) {
+						refreshParams.client_secret = clientSecret;
+					}
+
 				const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',
 					},
-					body: new URLSearchParams({
-						grant_type: 'refresh_token',
-							client_id: clientId,
-							client_secret: clientSecret,
-							refresh_token: refreshToken,
-						}),
+					body: new URLSearchParams(refreshParams),
 					});
 
 				if (!tokenResponse.ok) {

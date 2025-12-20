@@ -236,13 +236,13 @@ export class CanvaMcpAuth implements INodeType {
 					const address = server.address();
 					actualPort = typeof address === 'object' && address ? address.port : callbackPort;
 
-					// MCP only requires OpenID Connect scopes
-					const scopes = [
-						'openid',
-						'email',
-						'profile',
-					];					const authUrl = new URL('https://www.canva.com/api/oauth/authorize');
-					authUrl.searchParams.set('response_type', 'code');
+				// MCP only requires OpenID Connect scopes
+				const scopes = [
+					'openid',
+					'email',
+					'profile',
+				];					const authUrl = new URL(`${mcpServerUrl}/authorize`);
+				authUrl.searchParams.set('response_type', 'code');
 						authUrl.searchParams.set('client_id', clientId);
 					authUrl.searchParams.set('code_challenge', codeChallenge);
 					authUrl.searchParams.set('code_challenge_method', 'S256');

@@ -13,71 +13,46 @@ El servidor MCP de Canva (`https://mcp.canva.com`) ya está listo para usar. Sol
 ### Paso 1: Workflow Base
 
 ```
-[Canva MCP Auth] → [AI Agent] → [HTTP Request para descargar]
+[Canva MCP Auth] → [Set Variable] → [AI Agent]
 ```
 
-### Paso 2: Configurar AI Agent
+### Paso 2: Obtener Access Token
 
-En tu nodo **AI Agent**, configura la conexión al servidor MCP de Canva:
+1. **Nodo: Canva MCP Auth**
+   - Ejecuta autenticación OAuth
+   - Output: `{ "access_token": "eyJ0...", "refresh_token": "...", ... }`
 
-**Opción A: En la UI de n8n**
+2. **Nodo: Set Variable** (opcional, para facilitar el acceso)
+   ```javascript
+   {
+     "canva_token": "{{ $json.access_token }}"
+   }
+   ```
 
-1. Agrega nodo **AI Agent**
-2. En **Tools**, selecciona **MCP Tools**
-3. Configura el servidor:
-   - **Name**: `canva`
-   - **URL**: `https://mcp.canva.com/sse`
-   - **Transport**: `SSE` (Server-Sent Events)
-   - **Headers**: 
-     ```json
-     {
-       "Authorization": "Bearer {{ $('Canva MCP Auth').item.json.access_token }}"
-     }
-     ```
+### Paso 3: Configurar Credential para AI Agent
 
-**Opción B: JSON Configuration**
+1. Ve a **Credentials** en n8n
+2. Crea nueva credential: **Canva MCP (AI Agent)**
+3. Configura:
+   - **Access Token**: Pega el token del nodo Canva MCP Auth
+   - **MCP Server URL**: `https://mcp.canva.com/sse` (por defecto)
 
-```json
-{
-  "nodes": [
-    {
-      "name": "Canva MCP Auth",
-      "type": "n8n-nodes-canva-improved.canvaMcpAuth",
-      "parameters": {
-        "mcpServerUrl": "https://mcp.canva.com",
-        "autoOpenBrowser": true
-      }
-    },
-    {
-      "name": "AI Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "parameters": {
-        "agent": "toolsAgent",
-        "promptType": "define",
-        "text": "=Genera una presentación profesional sobre {{ $json.topic }} y expórtala como PDF",
-        "options": {
-          "tools": [
-            {
-              "name": "mcp",
-              "mcpServers": [
-                {
-                  "name": "canva",
-                  "url": "https://mcp.canva.com/sse",
-                  "transport": "sse",
-                  "authentication": {
-                    "type": "bearer",
-                    "token": "={{ $('Canva MCP Auth').item.json.access_token }}"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  ]
-}
-```
+### Paso 4: Configurar AI Agent
+
+En tu nodo **AI Agent**:
+
+1. **Tools** → Add Tool → **MCP Tool**
+2. **Credential**: Selecciona la credential "Canva MCP (AI Agent)" que creaste
+3. El agente ahora tiene acceso automático a todas las herramientas de Canva
+
+### Alternativa: Usar Expression en Credential
+
+Si quieres que el token se actualice automáticamente desde el nodo anterior:
+
+1. En la credential **Canva MCP (AI Agent)**:
+   - **Access Token**: `={{ $('Canva MCP Auth').item.json.access_token }}`
+   
+⚠️ **Nota**: Esta expresión solo funciona si ejecutas el workflow completo. Para testing individual del agente, usa el token estático.
 
 ## 🛠️ Herramientas Disponibles Automáticamente
 

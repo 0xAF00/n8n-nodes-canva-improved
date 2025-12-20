@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-canva-improved",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Nodo mejorado de n8n para integrar Canva Connect API con OAuth 2.0 PKCE y soporte completo para diseños, exportaciones y carpetas",
   "keywords": [
     "n8n-community-node-package",
@@ -44,7 +44,8 @@
     "credentials": [
       "dist/credentials/CanvaApi.credentials.js",
       "dist/credentials/CanvaMcpApi.credentials.js",
-      "dist/credentials/CanvaMcpStdio.credentials.js"
+      "dist/credentials/CanvaMcpStdio.credentials.js",
+      "dist/credentials/CanvaMcpAgent.credentials.js"
     ],
     "nodes": [
       "dist/nodes/Canva/Canva.node.js",

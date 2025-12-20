@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.2';
+const N8N_MCP_VERSION = '2.6.3';
 
 interface RegisteredClient {
 	client_id: string;
@@ -304,54 +304,58 @@ export class CanvaMcpAuth implements INodeType {
 									return;
 								}
 
-								if (!code) {
-									res.writeHead(400, { 'Content-Type': 'text/html' });
-									res.end('<html><body><h1>❌ No Authorization Code</h1></body></html>');
-									closeServer();
-									reject(new Error('No authorization code received'));
-									return;
-					}					// Exchange code for token
-					try {
-						this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
-						this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
-						
-						// Build token request params (only include client_secret if present)
-						const tokenParams: Record<string, string> = {
-							grant_type: 'authorization_code',
-							client_id: clientId,
-							code: code,
-							code_verifier: codeVerifier,
-							redirect_uri: callbackUrl,
-						};
+							if (!code) {
+								res.writeHead(400, { 'Content-Type': 'text/html' });
+								res.end('<html><body><h1>❌ No Authorization Code</h1></body></html>');
+								closeServer();
+								reject(new Error('No authorization code received'));
+								return;
+							}
 
-						// Only add client_secret if it exists (public clients don't have secrets)
-						if (clientSecret) {
-							tokenParams.client_secret = clientSecret;
-						}
-						
-						const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
-								method: 'POST',
+							// Exchange code for token
+							try {
+								this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
+								this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
+								
+								// Build token request params (only include client_secret if present)
+								const tokenParams: Record<string, string> = {
+									grant_type: 'authorization_code',
+									client_id: clientId,
+									code: code,
+									code_verifier: codeVerifier,
+									redirect_uri: callbackUrl,
+								};
+
+								// Only add client_secret if it exists (public clients don't have secrets)
+								if (clientSecret) {
+									tokenParams.client_secret = clientSecret;
+								}
+								
+								const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
+									method: 'POST',
 									headers: {
 										'Content-Type': 'application/x-www-form-urlencoded',
 									},
 									body: new URLSearchParams(tokenParams),
-								});									if (!tokenResponse.ok) {
-								const errorText = await tokenResponse.text();
-								throw new Error(`Token exchange failed: ${errorText}`);
-							}
+								});
 
-							const tokenData = await tokenResponse.json() as any;
+								if (!tokenResponse.ok) {
+									const errorText = await tokenResponse.text();
+									throw new Error(`Token exchange failed: ${errorText}`);
+								}
 
-							res.writeHead(200, { 'Content-Type': 'text/html' });
-									res.end(`
-										<html>
-											<body style="font-family: Arial; text-align: center; padding: 50px;">
-												<h1>✅ Authentication Successful!</h1>
-												<p>You can close this window and return to n8n.</p>
-												<p style="color: #666; font-size: 14px;">Token expires in ${tokenData.expires_in} seconds</p>
-									</body>
-								</html>
-							`);
+								const tokenData = await tokenResponse.json() as any;
+
+								res.writeHead(200, { 'Content-Type': 'text/html' });
+								res.end(`
+									<html>
+										<body style="font-family: Arial; text-align: center; padding: 50px;">
+											<h1>✅ Authentication Successful!</h1>
+											<p>You can close this window and return to n8n.</p>
+											<p style="color: #666; font-size: 14px;">Token expires in ${tokenData.expires_in} seconds</p>
+										</body>
+									</html>
+								`);
 
 								closeServer();
 								resolve({
@@ -363,15 +367,15 @@ export class CanvaMcpAuth implements INodeType {
 									expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
 								});
 							} catch (error) {
-									res.writeHead(500, { 'Content-Type': 'text/html' });
-									res.end(`<html><body><h1>❌ Token Exchange Failed</h1><p>${error}</p></body></html>`);
-									closeServer();
-									reject(error);
-								}
-							} else {
-								res.writeHead(404);
-								res.end('Not found');
+								res.writeHead(500, { 'Content-Type': 'text/html' });
+								res.end(`<html><body><h1>❌ Token Exchange Failed</h1><p>${error}</p></body></html>`);
+								closeServer();
+								reject(error);
 							}
+						} else {
+							res.writeHead(404);
+							res.end('Not found');
+						}
 					});
 
 			// Track connections for force close

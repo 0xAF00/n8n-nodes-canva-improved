@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.0';
+const N8N_MCP_VERSION = '2.6.1';
 
 interface RegisteredClient {
 	client_id: string;
@@ -124,19 +124,20 @@ export class CanvaMcpAuth implements INodeType {
 				],
 				default: 'authenticate',
 			},
-			{
-				displayName: 'Public Callback URL',
-				name: 'publicCallbackUrl',
-				type: 'string',
-				default: '',
-				placeholder: 'https://n8n.babykoala.pe',
-				description: 'Public URL for OAuth callback (leave empty for localhost). For servers, use your public domain without /oauth/callback path.',
-				displayOptions: {
-					show: {
-						operation: ['authenticate'],
-					},
-				},
-			},
+			// Commented out until Canva authorizes public domains
+			// {
+			// 	displayName: 'Public Callback URL',
+			// 	name: 'publicCallbackUrl',
+			// 	type: 'string',
+			// 	default: '',
+			// 	placeholder: 'https://n8n.babykoala.pe',
+			// 	description: 'Public URL for OAuth callback (leave empty for localhost). For servers, use your public domain without /oauth/callback path.',
+			// 	displayOptions: {
+			// 		show: {
+			// 			operation: ['authenticate'],
+			// 		},
+			// 	},
+			// },
 			{
 				displayName: 'Callback Port',
 				name: 'callbackPort',
@@ -203,9 +204,11 @@ export class CanvaMcpAuth implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 				try {
 				if (operation === 'authenticate') {
-					const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
-					const publicCallbackUrl = this.getNodeParameter('publicCallbackUrl', i) as string || '';
-					const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
+				const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
+				// Temporarily disabled until Canva authorizes public domains
+				// const publicCallbackUrl = this.getNodeParameter('publicCallbackUrl', i) as string || '';
+				const publicCallbackUrl: string = ''; // Force localhost for now
+				const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
 					const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
 
 					// Build callback URL
@@ -254,6 +257,19 @@ export class CanvaMcpAuth implements INodeType {
 
 						const state = crypto.randomUUID();					// Create OAuth callback server
 					const tokenResult = await new Promise<any>((resolve, reject) => {
+						let timeoutId: NodeJS.Timeout | null = null;
+						let serverClosed = false;
+
+						const closeServer = () => {
+							if (!serverClosed) {
+								serverClosed = true;
+								if (timeoutId) clearTimeout(timeoutId);
+								server.close(() => {
+									this.logger.info('🔒 OAuth callback server closed');
+								});
+							}
+						};
+
 						const server = http.createServer(async (req: any, res: any) => {
 							const protocol = publicCallbackUrl ? 'https' : 'http';
 							const host = publicCallbackUrl ? publicCallbackUrl.replace(/^https?:\/\//, '') : `localhost:${actualPort}`;
@@ -267,7 +283,7 @@ export class CanvaMcpAuth implements INodeType {
 								if (error) {
 									res.writeHead(400, { 'Content-Type': 'text/html' });
 									res.end(`<html><body><h1>❌ Authentication Failed</h1><p>${error}</p></body></html>`);
-									server.close();
+									closeServer();
 									reject(new Error(`OAuth error: ${error}`));
 									return;
 								}
@@ -275,7 +291,7 @@ export class CanvaMcpAuth implements INodeType {
 								if (returnedState !== state) {
 									res.writeHead(400, { 'Content-Type': 'text/html' });
 									res.end('<html><body><h1>❌ State Mismatch</h1><p>Invalid OAuth state</p></body></html>');
-									server.close();
+									closeServer();
 									reject(new Error('OAuth state mismatch'));
 									return;
 								}
@@ -283,12 +299,10 @@ export class CanvaMcpAuth implements INodeType {
 								if (!code) {
 									res.writeHead(400, { 'Content-Type': 'text/html' });
 									res.end('<html><body><h1>❌ No Authorization Code</h1></body></html>');
-									server.close();
+									closeServer();
 									reject(new Error('No authorization code received'));
 									return;
-						}
-
-					// Exchange code for token
+					}					// Exchange code for token
 					try {
 						this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
 						this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
@@ -327,11 +341,11 @@ export class CanvaMcpAuth implements INodeType {
 												<h1>✅ Authentication Successful!</h1>
 												<p>You can close this window and return to n8n.</p>
 												<p style="color: #666; font-size: 14px;">Token expires in ${tokenData.expires_in} seconds</p>
-											</body>
-										</html>
-									`);
+									</body>
+								</html>
+							`);
 
-								server.close();
+								closeServer();
 								resolve({
 									access_token: tokenData.access_token,
 									refresh_token: tokenData.refresh_token,
@@ -343,7 +357,7 @@ export class CanvaMcpAuth implements INodeType {
 							} catch (error) {
 									res.writeHead(500, { 'Content-Type': 'text/html' });
 									res.end(`<html><body><h1>❌ Token Exchange Failed</h1><p>${error}</p></body></html>`);
-									server.close();
+									closeServer();
 									reject(error);
 								}
 							} else {
@@ -388,17 +402,19 @@ export class CanvaMcpAuth implements INodeType {
 			});
 			
 			server.on('error', (error: any) => {
+				closeServer();
 				reject(new Error(`Failed to start OAuth server: ${error.message}`));
 			});
 
 			// Timeout after 5 minutes
-			setTimeout(() => {
-				server.close();
+			timeoutId = setTimeout(() => {
+				this.logger.warn('⏰ OAuth authentication timeout (5 minutes)');
+				closeServer();
 				reject(new Error('OAuth authentication timeout (5 minutes)'));
 			}, 5 * 60 * 1000);
 		});
 
-				// Update credential with new token (this won't persist automatically in n8n)
+		// Update credential with new token
 				// User needs to manually update the credential with these values
 				returnData.push({
 					json: {

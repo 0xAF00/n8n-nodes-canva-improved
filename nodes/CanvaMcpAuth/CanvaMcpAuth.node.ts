@@ -172,12 +172,12 @@ export class CanvaMcpAuth implements INodeType {
 									server.close();
 									reject(new Error('No authorization code received'));
 									return;
-							}
+						}
 
-							// Exchange code for token
-							try {
-								const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
-									method: 'POST',
+						// Exchange code for token
+						try {
+							const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
+								method: 'POST',
 									headers: {
 										'Content-Type': 'application/x-www-form-urlencoded',
 									},
@@ -249,24 +249,24 @@ export class CanvaMcpAuth implements INodeType {
 								'folder:write',
 								'comment:read',
 								'comment:write',
-								'brandtemplate:meta:read',
-								'brandtemplate:content:read',
-								'profile:read',
-						];
+							'brandtemplate:meta:read',
+							'brandtemplate:content:read',
+							'profile:read',
+					];
 
-						const authUrl = new URL(`${mcpServerUrl}/authorize`);
-						authUrl.searchParams.set('response_type', 'code');
+					const authUrl = new URL('https://www.canva.com/api/oauth/authorize');
+					authUrl.searchParams.set('response_type', 'code');
 						authUrl.searchParams.set('client_id', clientId);
-						authUrl.searchParams.set('code_challenge', codeChallenge);
-						authUrl.searchParams.set('code_challenge_method', 'S256');
-						authUrl.searchParams.set('redirect_uri', `http://localhost:${actualPort}/oauth/callback`);
-						authUrl.searchParams.set('state', state);
-						authUrl.searchParams.set('scope', scopes.join(' '));
+					authUrl.searchParams.set('code_challenge', codeChallenge);
+					authUrl.searchParams.set('code_challenge_method', 'S256');
+					authUrl.searchParams.set('redirect_uri', `http://localhost:${actualPort}/oauth/callback`);
+					authUrl.searchParams.set('state', state);
+					authUrl.searchParams.set('scope', scopes.join(' '));
 
-					this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
-					this.logger.info(`🔌 Using MCP endpoint: ${mcpServerUrl}/${mcpEndpoint}`);
-					this.logger.info(`🌐 Please authorize this client by visiting:`);
-					this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
+				this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
+				this.logger.info(`🔌 MCP Server: ${mcpServerUrl} (endpoint: /${mcpEndpoint})`);
+				this.logger.info(`🌐 Please authorize this client by visiting:`);
+				this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
 							// Try to open browser
 							const command = process.platform === 'win32' ? 'start' : 
 											process.platform === 'darwin' ? 'open' : 'xdg-open';
@@ -284,24 +284,23 @@ export class CanvaMcpAuth implements INodeType {
 						}, 5 * 60 * 1000);
 					});
 
-					// Update credential with new token (this won't persist automatically in n8n)
-					// User needs to manually update the credential with these values
-					returnData.push({
-						json: {
-							success: true,
-							access_token: tokenResult.access_token,
-							refresh_token: tokenResult.refresh_token,
-							expires_in: tokenResult.expires_in,
-							expiry_timestamp: tokenResult.expiry_timestamp,
-							token_type: tokenResult.token_type,
-							scope: tokenResult.scope,
-							mcp_endpoint: `${mcpServerUrl}/${mcpEndpoint}`,
-							message: '✅ Authentication successful! Copy the access_token and refresh_token to your Canva MCP Stdio credential.',
-						},
-						pairedItem: { item: i },
-					});
-
-				} else if (operation === 'refresh') {
+				// Update credential with new token (this won't persist automatically in n8n)
+				// User needs to manually update the credential with these values
+				returnData.push({
+					json: {
+						success: true,
+						access_token: tokenResult.access_token,
+						refresh_token: tokenResult.refresh_token,
+						expires_in: tokenResult.expires_in,
+						expiry_timestamp: tokenResult.expiry_timestamp,
+						token_type: tokenResult.token_type,
+						scope: tokenResult.scope,
+						mcp_server_url: mcpServerUrl,
+						mcp_endpoint: mcpEndpoint,
+						message: '✅ Authentication successful! Copy the access_token and refresh_token to your Canva MCP Stdio credential.',
+					},
+					pairedItem: { item: i },
+				});				} else if (operation === 'refresh') {
 					const refreshToken = credentials.refreshToken;
 					
 					if (!refreshToken) {
@@ -311,7 +310,7 @@ export class CanvaMcpAuth implements INodeType {
 					);
 				}
 
-				const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
+				const tokenResponse = await fetch(`${mcpServerUrl}/token`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',

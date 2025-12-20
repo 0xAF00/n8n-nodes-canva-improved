@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.5.0';
+const N8N_MCP_VERSION = '2.6.0';
 
 interface RegisteredClient {
 	client_id: string;
@@ -29,20 +29,22 @@ const registeredClients = new Map<string, RegisteredClient>();
  */
 async function registerClient(
 	mcpServerUrl: string,
-	callbackPort: number,
+	callbackUrl: string,
 	logger: any
 ): Promise<RegisteredClient> {
-	// Check if already registered
-	const cached = registeredClients.get(mcpServerUrl);
+	// Check if already registered for this callback URL
+	const cacheKey = `${mcpServerUrl}|${callbackUrl}`;
+	const cached = registeredClients.get(cacheKey);
 	if (cached) {
 		logger.info('♻️ Using cached client registration');
 		return cached;
 	}
 
 	logger.info('📝 Registering new OAuth client with Canva MCP...');
+	logger.info(`📍 Callback URL: ${callbackUrl}`);
 
 	const registrationData = {
-		redirect_uris: [`http://localhost:${callbackPort}/oauth/callback`],
+		redirect_uris: [callbackUrl],
 		token_endpoint_auth_method: 'none', // Public client (no secret)
 		grant_types: ['authorization_code', 'refresh_token'],
 		response_types: ['code'],
@@ -69,8 +71,8 @@ async function registerClient(
 	const registered = await response.json() as RegisteredClient;
 	logger.info(`✅ Client registered: ${registered.client_id}`);
 
-	// Cache it
-	registeredClients.set(mcpServerUrl, registered);
+	// Cache it with callback URL
+	registeredClients.set(cacheKey, registered);
 
 	return registered;
 }
@@ -123,11 +125,24 @@ export class CanvaMcpAuth implements INodeType {
 				default: 'authenticate',
 			},
 			{
+				displayName: 'Public Callback URL',
+				name: 'publicCallbackUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://n8n.babykoala.pe',
+				description: 'Public URL for OAuth callback (leave empty for localhost). For servers, use your public domain without /oauth/callback path.',
+				displayOptions: {
+					show: {
+						operation: ['authenticate'],
+					},
+				},
+			},
+			{
 				displayName: 'Callback Port',
 				name: 'callbackPort',
 				type: 'number',
 				default: 29865,
-				description: 'Port for OAuth callback server (default: 29865)',
+				description: 'Port for OAuth callback server (default: 29865). Only used when Public Callback URL is empty.',
 				displayOptions: {
 					show: {
 						operation: ['authenticate'],
@@ -187,42 +202,62 @@ export class CanvaMcpAuth implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 				try {
-					if (operation === 'authenticate') {
-						const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
-						const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
-						const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
+				if (operation === 'authenticate') {
+					const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
+					const publicCallbackUrl = this.getNodeParameter('publicCallbackUrl', i) as string || '';
+					const callbackPort = this.getNodeParameter('callbackPort', i) as number || 29865;
+					const autoOpenBrowser = this.getNodeParameter('autoOpenBrowser', i) as boolean;
 
-						// Step 1: Get client credentials (manual or dynamic registration)
-						let clientId: string;
-						let clientSecret: string;
+					// Build callback URL
+					let callbackUrl: string;
+					let serverHost: string;
+					let actualPort: number;
 
-						if (manualClientId) {
-							// Use manual credentials if provided
-							this.logger.info('🔑 Using manual Client ID from credentials');
-							clientId = manualClientId;
-							clientSecret = manualClientSecret || '';
-						} else {
-							// Use Dynamic Client Registration
-							const registeredClient = await registerClient(
-								mcpServerUrl,
-								callbackPort,
-								this.logger
-							);
-							clientId = registeredClient.client_id;
-							clientSecret = registeredClient.client_secret || '';
-						}
-						
-						// Step 2: Generate PKCE challenge
+					if (publicCallbackUrl) {
+						// Public server mode
+						callbackUrl = `${publicCallbackUrl.replace(/\/$/, '')}/oauth/callback`;
+						serverHost = '0.0.0.0'; // Listen on all interfaces
+						actualPort = callbackPort;
+						this.logger.info(`🌐 Public server mode: ${callbackUrl}`);
+					} else {
+						// Localhost mode
+						callbackUrl = `http://localhost:${callbackPort}/oauth/callback`;
+						serverHost = '127.0.0.1'; // Only localhost
+						actualPort = callbackPort;
+						this.logger.info(`🏠 Localhost mode: ${callbackUrl}`);
+					}
+
+					// Step 1: Get client credentials (manual or dynamic registration)
+					let clientId: string;
+					let clientSecret: string;
+
+					if (manualClientId) {
+						// Use manual credentials if provided
+						this.logger.info('🔑 Using manual Client ID from credentials');
+						clientId = manualClientId;
+						clientSecret = manualClientSecret || '';
+					} else {
+						// Use Dynamic Client Registration
+						const registeredClient = await registerClient(
+							mcpServerUrl,
+							callbackUrl,
+							this.logger
+						);
+						clientId = registeredClient.client_id;
+						clientSecret = registeredClient.client_secret || '';
+					}						// Step 2: Generate PKCE challenge
 						const codeVerifier = crypto.randomBytes(32).toString('base64url');
 						const codeChallenge = crypto
 							.createHash('sha256')
 							.update(codeVerifier)
 							.digest('base64url');
 
-						const state = crypto.randomUUID();					// Create local OAuth callback server
+						const state = crypto.randomUUID();					// Create OAuth callback server
 					const tokenResult = await new Promise<any>((resolve, reject) => {
 						const server = http.createServer(async (req: any, res: any) => {
-							const url = new URL(req.url!, `http://localhost:${actualPort}`);
+							const protocol = publicCallbackUrl ? 'https' : 'http';
+							const host = publicCallbackUrl ? publicCallbackUrl.replace(/^https?:\/\//, '') : `localhost:${actualPort}`;
+							const url = new URL(req.url!, `${protocol}://${host}`);
 							
 							if (url.pathname === '/oauth/callback') {
 								const code = url.searchParams.get('code');
@@ -264,7 +299,7 @@ export class CanvaMcpAuth implements INodeType {
 							client_id: clientId,
 							code: code,
 							code_verifier: codeVerifier,
-							redirect_uri: `http://localhost:${actualPort}/oauth/callback`,
+							redirect_uri: callbackUrl,
 						};
 
 						// Only add client_secret if it exists (public clients don't have secrets)
@@ -317,46 +352,51 @@ export class CanvaMcpAuth implements INodeType {
 							}
 						});
 
-						let actualPort: number;
-
-				server.listen(callbackPort, () => {
+				server.listen(actualPort, serverHost, () => {
 					const address = server.address();
-					actualPort = typeof address === 'object' && address ? address.port : callbackPort;
+					const listenPort = typeof address === 'object' && address ? address.port : actualPort;
 
 				// MCP only requires OpenID Connect scopes
 				const scopes = [
 					'openid',
 					'email',
 					'profile',
-				];					const authUrl = new URL(`${mcpServerUrl}/authorize`);
+				];
+				
+				const authUrl = new URL(`${mcpServerUrl}/authorize`);
 				authUrl.searchParams.set('response_type', 'code');
-						authUrl.searchParams.set('client_id', clientId);
-					authUrl.searchParams.set('code_challenge', codeChallenge);
-					authUrl.searchParams.set('code_challenge_method', 'S256');
-					authUrl.searchParams.set('redirect_uri', `http://localhost:${actualPort}/oauth/callback`);
-					authUrl.searchParams.set('state', state);
-					authUrl.searchParams.set('scope', scopes.join(' '));
+				authUrl.searchParams.set('client_id', clientId);
+				authUrl.searchParams.set('code_challenge', codeChallenge);
+				authUrl.searchParams.set('code_challenge_method', 'S256');
+				authUrl.searchParams.set('redirect_uri', callbackUrl);
+				authUrl.searchParams.set('state', state);
+				authUrl.searchParams.set('scope', scopes.join(' '));
 
-				this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
+				this.logger.info(`🔐 OAuth callback server running on ${serverHost}:${listenPort}`);
+				this.logger.info(`📍 Callback URL: ${callbackUrl}`);
 				this.logger.info(`🔌 MCP Server: ${mcpServerUrl} (endpoint: /${mcpEndpoint})`);
 				this.logger.info(`🌐 Please authorize this client by visiting:`);
-				this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
-							// Try to open browser
-							const command = process.platform === 'win32' ? 'start' : 
-											process.platform === 'darwin' ? 'open' : 'xdg-open';
-							exec(`${command} "${authUrl.toString()}"`);
-							this.logger.info('🌐 Browser opened automatically');
-					}
-				});							server.on('error', (error: any) => {
-							reject(new Error(`Failed to start OAuth server: ${error.message}`));
-						});
+				this.logger.info(authUrl.toString());
+				
+				if (autoOpenBrowser) {
+					// Try to open browser
+					const command = process.platform === 'win32' ? 'start' : 
+									process.platform === 'darwin' ? 'open' : 'xdg-open';
+					exec(`${command} "${authUrl.toString()}"`);
+					this.logger.info('🌐 Browser opened automatically');
+				}
+			});
+			
+			server.on('error', (error: any) => {
+				reject(new Error(`Failed to start OAuth server: ${error.message}`));
+			});
 
-						// Timeout after 5 minutes
-						setTimeout(() => {
-						server.close();
-							reject(new Error('OAuth authentication timeout (5 minutes)'));
-						}, 5 * 60 * 1000);
-					});
+			// Timeout after 5 minutes
+			setTimeout(() => {
+				server.close();
+				reject(new Error('OAuth authentication timeout (5 minutes)'));
+			}, 5 * 60 * 1000);
+		});
 
 				// Update credential with new token (this won't persist automatically in n8n)
 				// User needs to manually update the credential with these values
@@ -376,7 +416,6 @@ export class CanvaMcpAuth implements INodeType {
 					pairedItem: { item: i },
 				});				} else if (operation === 'refresh') {
 					const refreshToken = credentials.refreshToken;
-					const callbackPort = 29865; // Use default for registration
 					
 					if (!refreshToken) {
 					throw new NodeOperationError(
@@ -386,6 +425,7 @@ export class CanvaMcpAuth implements INodeType {
 				}
 
 					// Get client credentials (manual or dynamic)
+					// Note: For refresh, we use the same registration as authenticate
 					let clientId: string;
 					let clientSecret: string;
 
@@ -394,13 +434,18 @@ export class CanvaMcpAuth implements INodeType {
 						clientId = manualClientId;
 						clientSecret = manualClientSecret || '';
 					} else {
-						const registeredClient = await registerClient(
-							mcpServerUrl,
-							callbackPort,
-							this.logger
-						);
-						clientId = registeredClient.client_id;
-						clientSecret = registeredClient.client_secret || '';
+						// Use the first cached registration (we can't know which callback URL was used)
+						const firstRegistration = Array.from(registeredClients.values())[0];
+						if (firstRegistration) {
+							this.logger.info('♻️ Using cached client for refresh');
+							clientId = firstRegistration.client_id;
+							clientSecret = firstRegistration.client_secret || '';
+						} else {
+							throw new NodeOperationError(
+								this.getNode(),
+								'No registered client found. Please authenticate first.'
+							);
+						}
 					}
 
 					const refreshParams: Record<string, string> = {

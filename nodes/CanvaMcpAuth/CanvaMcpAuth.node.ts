@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.6';
+const N8N_MCP_VERSION = '2.6.7';
 
 interface RegisteredClient {
 	client_id: string;
@@ -407,49 +407,49 @@ export class CanvaMcpAuth implements INodeType {
 					const address = server.address();
 					const listenPort = typeof address === 'object' && address ? address.port : actualPort;
 
-				// MCP only requires OpenID Connect scopes
-				const scopes = [
-					'openid',
-					'email',
-					'profile',
-				];
-				
-				const authUrl = new URL(`${mcpServerUrl}/authorize`);
-				authUrl.searchParams.set('response_type', 'code');
-				authUrl.searchParams.set('client_id', clientId);
-				authUrl.searchParams.set('code_challenge', codeChallenge);
-				authUrl.searchParams.set('code_challenge_method', 'S256');
-				authUrl.searchParams.set('redirect_uri', callbackUrl);
-				authUrl.searchParams.set('state', state);
-				authUrl.searchParams.set('scope', scopes.join(' '));
+					// MCP only requires OpenID Connect scopes
+					const scopes = [
+						'openid',
+						'email',
+						'profile',
+					];
+					
+					const authUrl = new URL(`${mcpServerUrl}/authorize`);
+					authUrl.searchParams.set('response_type', 'code');
+					authUrl.searchParams.set('client_id', clientId);
+					authUrl.searchParams.set('code_challenge', codeChallenge);
+					authUrl.searchParams.set('code_challenge_method', 'S256');
+					authUrl.searchParams.set('redirect_uri', callbackUrl);
+					authUrl.searchParams.set('state', state);
+					authUrl.searchParams.set('scope', scopes.join(' '));
 
-				this.logger.info(`🔐 OAuth callback server running on ${serverHost}:${listenPort}`);
-				this.logger.info(`📍 Callback URL: ${callbackUrl}`);
-				this.logger.info(`🔌 MCP Server: ${mcpServerUrl} (endpoint: /${mcpEndpoint})`);
-				this.logger.info(`🌐 Please authorize this client by visiting:`);
-				this.logger.info(authUrl.toString());
+					this.logger.info(`🔐 OAuth callback server running on ${serverHost}:${listenPort}`);
+					this.logger.info(`📍 Callback URL: ${callbackUrl}`);
+					this.logger.info(`🔌 MCP Server: ${mcpServerUrl} (endpoint: /${mcpEndpoint})`);
+					this.logger.info(`🌐 Please authorize this client by visiting:`);
+					this.logger.info(authUrl.toString());
+					
+					if (autoOpenBrowser) {
+						// Try to open browser
+						const command = process.platform === 'win32' ? 'start' : 
+										process.platform === 'darwin' ? 'open' : 'xdg-open';
+						exec(`${command} "${authUrl.toString()}"`);
+						this.logger.info('🌐 Browser opened automatically');
+					}
+				});
 				
-				if (autoOpenBrowser) {
-					// Try to open browser
-					const command = process.platform === 'win32' ? 'start' : 
-									process.platform === 'darwin' ? 'open' : 'xdg-open';
-					exec(`${command} "${authUrl.toString()}"`);
-					this.logger.info('🌐 Browser opened automatically');
-				}
-			});
-			
-			server.on('error', (error: any) => {
-				closeServer();
-				reject(new Error(`Failed to start OAuth server: ${error.message}`));
-			});
+				server.on('error', (error: any) => {
+					closeServer();
+					reject(new Error(`Failed to start OAuth server: ${error.message}`));
+				});
 
-			// Timeout after 5 minutes
-			timeoutId = setTimeout(() => {
-				this.logger.warn('⏰ OAuth authentication timeout (5 minutes)');
-				closeServer();
-				reject(new Error('OAuth authentication timeout (5 minutes)'));
-			}, 5 * 60 * 1000);
-		});
+				// Timeout after 5 minutes
+				timeoutId = setTimeout(() => {
+					this.logger.warn('⏰ OAuth authentication timeout (5 minutes)');
+					closeServer();
+					reject(new Error('OAuth authentication timeout (5 minutes)'));
+				}, 5 * 60 * 1000);
+			});
 
 		// Update credential with new token
 				// User needs to manually update the credential with these values

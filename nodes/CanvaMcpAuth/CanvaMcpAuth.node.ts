@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.3';
+const N8N_MCP_VERSION = '2.6.4';
 
 interface RegisteredClient {
 	client_id: string;
@@ -278,17 +278,26 @@ export class CanvaMcpAuth implements INodeType {
 							}
 						};
 
-						const server = http.createServer(async (req: any, res: any) => {
-							const protocol = publicCallbackUrl ? 'https' : 'http';
-							const host = publicCallbackUrl ? publicCallbackUrl.replace(/^https?:\/\//, '') : `localhost:${actualPort}`;
-							const url = new URL(req.url!, `${protocol}://${host}`);
-							
-							if (url.pathname === '/oauth/callback') {
-								const code = url.searchParams.get('code');
-								const returnedState = url.searchParams.get('state');
-								const error = url.searchParams.get('error');
+					const server = http.createServer(async (req: any, res: any) => {
+						this.logger.info(`📨 Incoming request: ${req.method} ${req.url}`);
+						
+						const protocol = publicCallbackUrl ? 'https' : 'http';
+						const host = publicCallbackUrl ? publicCallbackUrl.replace(/^https?:\/\//, '') : `localhost:${actualPort}`;
+						const url = new URL(req.url!, `${protocol}://${host}`);
+						
+						this.logger.info(`🔍 Parsed pathname: ${url.pathname}`);
+						
+						if (url.pathname === '/oauth/callback') {
+							this.logger.info('✅ Callback endpoint matched!');
+							const code = url.searchParams.get('code');
+							const returnedState = url.searchParams.get('state');
+							const error = url.searchParams.get('error');
 
-								if (error) {
+							this.logger.info(`🔑 Code: ${code ? 'received' : 'missing'}`);
+							this.logger.info(`🎫 State: ${returnedState ? 'received' : 'missing'}`);
+							this.logger.info(`❌ Error: ${error || 'none'}`);
+
+							if (error) {
 									res.writeHead(400, { 'Content-Type': 'text/html' });
 									res.end(`<html><body><h1>❌ Authentication Failed</h1><p>${error}</p></body></html>`);
 									closeServer();
@@ -314,6 +323,7 @@ export class CanvaMcpAuth implements INodeType {
 
 							// Exchange code for token
 							try {
+								this.logger.info(`🔄 Starting token exchange...`);
 								this.logger.info(`🔄 Token exchange - Client ID: ${clientId}`);
 								this.logger.info(`📍 Token endpoint: ${mcpServerUrl}/token`);
 								
@@ -344,21 +354,26 @@ export class CanvaMcpAuth implements INodeType {
 									throw new Error(`Token exchange failed: ${errorText}`);
 								}
 
-								const tokenData = await tokenResponse.json() as any;
+							const tokenData = await tokenResponse.json() as any;
 
-								res.writeHead(200, { 'Content-Type': 'text/html' });
-								res.end(`
-									<html>
-										<body style="font-family: Arial; text-align: center; padding: 50px;">
-											<h1>✅ Authentication Successful!</h1>
-											<p>You can close this window and return to n8n.</p>
-											<p style="color: #666; font-size: 14px;">Token expires in ${tokenData.expires_in} seconds</p>
-										</body>
-									</html>
-								`);
+							this.logger.info(`✅ Token exchange successful!`);
+							this.logger.info(`📦 Token data: expires_in=${tokenData.expires_in}s`);
 
-								closeServer();
-								resolve({
+							res.writeHead(200, { 'Content-Type': 'text/html' });
+							res.end(`
+								<html>
+									<body style="font-family: Arial; text-align: center; padding: 50px;">
+										<h1>✅ Authentication Successful!</h1>
+										<p>You can close this window and return to n8n.</p>
+										<p style="color: #666; font-size: 14px;">Token expires in ${tokenData.expires_in} seconds</p>
+									</body>
+								</html>
+							`);
+
+							this.logger.info(`📤 HTML response sent to browser`);
+
+							closeServer();
+							resolve({
 									access_token: tokenData.access_token,
 									refresh_token: tokenData.refresh_token,
 									expires_in: tokenData.expires_in,
@@ -366,19 +381,19 @@ export class CanvaMcpAuth implements INodeType {
 									scope: tokenData.scope,
 									expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
 								});
-							} catch (error) {
-								res.writeHead(500, { 'Content-Type': 'text/html' });
-								res.end(`<html><body><h1>❌ Token Exchange Failed</h1><p>${error}</p></body></html>`);
-								closeServer();
-								reject(error);
-							}
-						} else {
-							res.writeHead(404);
-							res.end('Not found');
+						} catch (error) {
+							this.logger.error(`❌ Token exchange error: ${error}`);
+							res.writeHead(500, { 'Content-Type': 'text/html' });
+							res.end(`<html><body><h1>❌ Token Exchange Failed</h1><p>${error}</p></body></html>`);
+							closeServer();
+							reject(error);
 						}
-					});
-
-			// Track connections for force close
+					} else {
+						this.logger.warn(`⚠️ Unknown path: ${url.pathname}`);
+						res.writeHead(404);
+						res.end('Not found');
+					}
+				});			// Track connections for force close
 			server.on('connection', (conn: any) => {
 				connections.add(conn);
 				conn.on('close', () => {

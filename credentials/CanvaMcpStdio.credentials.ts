@@ -1,6 +1,5 @@
 import {
 	IAuthenticateGeneric,
-	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties,
 } from 'n8n-workflow';
@@ -77,14 +76,6 @@ export class CanvaMcpStdio implements ICredentialType {
 				'Authorization': '=Bearer {{$credentials.accessToken}}',
 				'Content-Type': 'application/json',
 			},
-		},
-	};
-
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: '={{$credentials.mcpServerUrl}}',
-			url: '/sse',
-			method: 'GET',
 		},
 	};
 }

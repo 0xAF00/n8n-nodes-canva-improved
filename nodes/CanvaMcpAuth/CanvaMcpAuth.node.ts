@@ -68,6 +68,30 @@ export class CanvaMcpAuth implements INodeType {
 				},
 			},
 			{
+				displayName: 'MCP Endpoint',
+				name: 'mcpEndpoint',
+				type: 'options',
+				options: [
+					{
+						name: 'SSE (Server-Sent Events) - /sse',
+						value: 'sse',
+						description: 'Standard SSE transport for MCP',
+					},
+					{
+						name: 'MCP Protocol - /mcp',
+						value: 'mcp',
+						description: 'Alternative MCP endpoint (used by Claude Desktop)',
+					},
+				],
+				default: 'sse',
+				description: 'Which MCP endpoint to use for connection',
+				displayOptions: {
+					show: {
+						operation: ['authenticate'],
+					},
+				},
+			},
+			{
 				displayName: 'Auto Open Browser',
 				name: 'autoOpenBrowser',
 				type: 'boolean',
@@ -102,6 +126,8 @@ export class CanvaMcpAuth implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (operation === 'authenticate') {
+					const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
+					
 					// Generate PKCE challenge
 					const crypto = (globalThis as any).require('crypto');
 					const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -231,22 +257,21 @@ export class CanvaMcpAuth implements INodeType {
 								'brandtemplate:meta:read',
 								'brandtemplate:content:read',
 								'profile:read',
-							];
+						];
 
-							const authUrl = new URL(`${mcpServerUrl}/authorize`);
-							authUrl.searchParams.set('response_type', 'code');
-							authUrl.searchParams.set('client_id', clientId);
-							authUrl.searchParams.set('code_challenge', codeChallenge);
-							authUrl.searchParams.set('code_challenge_method', 'S256');
-							authUrl.searchParams.set('redirect_uri', `http://localhost:${actualPort}/oauth/callback`);
-							authUrl.searchParams.set('state', state);
-							authUrl.searchParams.set('scope', scopes.join(' '));
+						const authUrl = new URL(`${mcpServerUrl}/authorize`);
+						authUrl.searchParams.set('response_type', 'code');
+						authUrl.searchParams.set('client_id', clientId);
+						authUrl.searchParams.set('code_challenge', codeChallenge);
+						authUrl.searchParams.set('code_challenge_method', 'S256');
+						authUrl.searchParams.set('redirect_uri', `http://localhost:${actualPort}/oauth/callback`);
+						authUrl.searchParams.set('state', state);
+						authUrl.searchParams.set('scope', scopes.join(' '));
 
-							this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
-							this.logger.info(`🌐 Please authorize this client by visiting:`);
-							this.logger.info(authUrl.toString());
-
-							if (autoOpenBrowser) {
+						this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
+						this.logger.info(`🔌 Using MCP endpoint: ${mcpServerUrl}/${mcpEndpoint}`);
+						this.logger.info(`🌐 Please authorize this client by visiting:`);
+						this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
 								// Try to open browser
 								const { exec } = (globalThis as any).require('child_process');
 								const process = (globalThis as any).process;
@@ -280,6 +305,7 @@ export class CanvaMcpAuth implements INodeType {
 							expiry_timestamp: tokenResult.expiry_timestamp,
 							token_type: tokenResult.token_type,
 							scope: tokenResult.scope,
+							mcp_endpoint: `${mcpServerUrl}/${mcpEndpoint}`,
 							message: '✅ Authentication successful! Copy the access_token and refresh_token to your Canva MCP Stdio credential.',
 						},
 						pairedItem: { item: i },

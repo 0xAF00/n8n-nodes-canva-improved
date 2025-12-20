@@ -11,7 +11,7 @@ import { exec } from 'node:child_process';
 
 // Software ID for Dynamic Client Registration (persistent across installations)
 const N8N_MCP_SOFTWARE_ID = '2e6dc280-f3c3-4e01-99a7-8181dbd1d23d';
-const N8N_MCP_VERSION = '2.6.4';
+const N8N_MCP_VERSION = '2.6.5';
 
 interface RegisteredClient {
 	client_id: string;
@@ -281,17 +281,17 @@ export class CanvaMcpAuth implements INodeType {
 					const server = http.createServer(async (req: any, res: any) => {
 						this.logger.info(`📨 Incoming request: ${req.method} ${req.url}`);
 						
-						const protocol = publicCallbackUrl ? 'https' : 'http';
-						const host = publicCallbackUrl ? publicCallbackUrl.replace(/^https?:\/\//, '') : `localhost:${actualPort}`;
-						const url = new URL(req.url!, `${protocol}://${host}`);
+						// Parse URL - req.url is always relative path like "/oauth/callback?code=..."
+						const [pathname, queryString] = (req.url || '').split('?');
+						const params = new URLSearchParams(queryString);
 						
-						this.logger.info(`🔍 Parsed pathname: ${url.pathname}`);
+						this.logger.info(`🔍 Parsed pathname: ${pathname}`);
 						
-						if (url.pathname === '/oauth/callback') {
+						if (pathname === '/oauth/callback') {
 							this.logger.info('✅ Callback endpoint matched!');
-							const code = url.searchParams.get('code');
-							const returnedState = url.searchParams.get('state');
-							const error = url.searchParams.get('error');
+							const code = params.get('code');
+							const returnedState = params.get('state');
+							const error = params.get('error');
 
 							this.logger.info(`🔑 Code: ${code ? 'received' : 'missing'}`);
 							this.logger.info(`🎫 State: ${returnedState ? 'received' : 'missing'}`);
@@ -389,7 +389,7 @@ export class CanvaMcpAuth implements INodeType {
 							reject(error);
 						}
 					} else {
-						this.logger.warn(`⚠️ Unknown path: ${url.pathname}`);
+						this.logger.warn(`⚠️ Unknown path: ${pathname}`);
 						res.writeHead(404);
 						res.end('Not found');
 					}

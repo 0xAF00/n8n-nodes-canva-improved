@@ -5,8 +5,9 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-
-// Node.js APIs accessed via globalThis for TypeScript compatibility
+import crypto from 'node:crypto';
+import http from 'node:http';
+import { exec } from 'node:child_process';
 
 export class CanvaMcpAuth implements INodeType {
 	description: INodeTypeDescription = {
@@ -129,7 +130,6 @@ export class CanvaMcpAuth implements INodeType {
 					const mcpEndpoint = this.getNodeParameter('mcpEndpoint', i) as string || 'sse';
 					
 					// Generate PKCE challenge
-					const crypto = (globalThis as any).require('crypto');
 					const codeVerifier = crypto.randomBytes(32).toString('base64url');
 					const codeChallenge = crypto
 						.createHash('sha256')
@@ -142,9 +142,7 @@ export class CanvaMcpAuth implements INodeType {
 
 					// Create local OAuth callback server
 					const tokenResult = await new Promise<any>((resolve, reject) => {
-						const http = (globalThis as any).require('http');
 						const server = http.createServer(async (req: any, res: any) => {
-							const URL = (globalThis as any).URL;
 							const url = new URL(req.url!, `http://localhost:${actualPort}`);
 							
 							if (url.pathname === '/oauth/callback') {
@@ -174,18 +172,16 @@ export class CanvaMcpAuth implements INodeType {
 									server.close();
 									reject(new Error('No authorization code received'));
 									return;
-								}
+							}
 
-								// Exchange code for token
-								try {
-									const fetch = (globalThis as any).fetch;
-									const URLSearchParams = (globalThis as any).URLSearchParams;
-									const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
-										method: 'POST',
-										headers: {
-											'Content-Type': 'application/x-www-form-urlencoded',
-										},
-										body: new URLSearchParams({
+							// Exchange code for token
+							try {
+								const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/x-www-form-urlencoded',
+									},
+									body: new URLSearchParams({
 											grant_type: 'authorization_code',
 											client_id: clientId,
 											client_secret: clientSecret,
@@ -196,13 +192,13 @@ export class CanvaMcpAuth implements INodeType {
 									});
 
 									if (!tokenResponse.ok) {
-										const errorText = await tokenResponse.text();
-										throw new Error(`Token exchange failed: ${errorText}`);
-									}
+								const errorText = await tokenResponse.text();
+								throw new Error(`Token exchange failed: ${errorText}`);
+							}
 
-									const tokenData = await tokenResponse.json();
+							const tokenData = await tokenResponse.json() as any;
 
-									res.writeHead(200, { 'Content-Type': 'text/html' });
+							res.writeHead(200, { 'Content-Type': 'text/html' });
 									res.end(`
 										<html>
 											<body style="font-family: Arial; text-align: center; padding: 50px;">
@@ -220,7 +216,7 @@ export class CanvaMcpAuth implements INodeType {
 									expires_in: tokenData.expires_in,
 									token_type: tokenData.token_type,
 									scope: tokenData.scope,
-									expiry_timestamp: (globalThis as any).Date.now() + (tokenData.expires_in * 1000),
+									expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
 								});
 							} catch (error) {
 									res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -236,14 +232,13 @@ export class CanvaMcpAuth implements INodeType {
 
 						let actualPort: number;
 
-						server.listen(callbackPort, () => {
-							const address = server.address();
-							actualPort = typeof address === 'object' && address ? address.port : callbackPort;
+					server.listen(callbackPort, () => {
+						const address = server.address();
+						actualPort = typeof address === 'object' && address ? address.port : callbackPort;
 
-							const URL = (globalThis as any).URL;
-							const scopes = [
-								'openid',
-								'email',
+						const scopes = [
+							'openid',
+							'email',
 								'profile',
 								'design:content:read',
 								'design:content:write',
@@ -268,28 +263,23 @@ export class CanvaMcpAuth implements INodeType {
 						authUrl.searchParams.set('state', state);
 						authUrl.searchParams.set('scope', scopes.join(' '));
 
-						this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
-						this.logger.info(`🔌 Using MCP endpoint: ${mcpServerUrl}/${mcpEndpoint}`);
-						this.logger.info(`🌐 Please authorize this client by visiting:`);
-						this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
-								// Try to open browser
-								const { exec } = (globalThis as any).require('child_process');
-								const process = (globalThis as any).process;
-								const command = process.platform === 'win32' ? 'start' : 
-												process.platform === 'darwin' ? 'open' : 'xdg-open';
-								exec(`${command} "${authUrl.toString()}"`);
-								this.logger.info('🌐 Browser opened automatically');
-							}
+					this.logger.info(`🔐 OAuth callback server running at http://localhost:${actualPort}`);
+					this.logger.info(`🔌 Using MCP endpoint: ${mcpServerUrl}/${mcpEndpoint}`);
+					this.logger.info(`🌐 Please authorize this client by visiting:`);
+					this.logger.info(authUrl.toString());							if (autoOpenBrowser) {
+							// Try to open browser
+							const command = process.platform === 'win32' ? 'start' : 
+											process.platform === 'darwin' ? 'open' : 'xdg-open';
+							exec(`${command} "${authUrl.toString()}"`);
+							this.logger.info('🌐 Browser opened automatically');
+					}
+				});							server.on('error', (error: any) => {
+							reject(new Error(`Failed to start OAuth server: ${error.message}`));
 						});
 
-							server.on('error', (error: any) => {
-								reject(new Error(`Failed to start OAuth server: ${error.message}`));
-							});
-
-							// Timeout after 5 minutes
-							const setTimeout = (globalThis as any).setTimeout;
-							setTimeout(() => {
-							server.close();
+						// Timeout after 5 minutes
+						setTimeout(() => {
+						server.close();
 							reject(new Error('OAuth authentication timeout (5 minutes)'));
 						}, 5 * 60 * 1000);
 					});
@@ -315,44 +305,42 @@ export class CanvaMcpAuth implements INodeType {
 					const refreshToken = credentials.refreshToken;
 					
 					if (!refreshToken) {
-						throw new NodeOperationError(
-							this.getNode(),
-							'Refresh token not found in credential. Please authenticate first.'
-						);
-					}
+					throw new NodeOperationError(
+						this.getNode(),
+						'Refresh token not found in credential. Please authenticate first.'
+					);
+				}
 
-					const fetch = (globalThis as any).fetch;
-					const URLSearchParams = (globalThis as any).URLSearchParams;
-					const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/x-www-form-urlencoded',
-						},
-						body: new URLSearchParams({
-							grant_type: 'refresh_token',
+				const tokenResponse = await fetch(`${mcpServerUrl}/oauth/token`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+					},
+					body: new URLSearchParams({
+						grant_type: 'refresh_token',
 							client_id: clientId,
 							client_secret: clientSecret,
 							refresh_token: refreshToken,
 						}),
 					});
 
-					if (!tokenResponse.ok) {
-						const errorText = await tokenResponse.text();
-						throw new NodeOperationError(
-							this.getNode(),
-							`Token refresh failed: ${errorText}`
-						);
-					}
+				if (!tokenResponse.ok) {
+					const errorText = await tokenResponse.text();
+					throw new NodeOperationError(
+						this.getNode(),
+						`Token refresh failed: ${errorText}`
+					);
+				}
 
-					const tokenData = await tokenResponse.json();
+				const tokenData = await tokenResponse.json() as any;
 
-					returnData.push({
+				returnData.push({
 						json: {
 							success: true,
-								access_token: tokenData.access_token,
-								refresh_token: tokenData.refresh_token || refreshToken,
-								expires_in: tokenData.expires_in,
-								expiry_timestamp: (globalThis as any).Date.now() + (tokenData.expires_in * 1000),
+							access_token: tokenData.access_token,
+							refresh_token: tokenData.refresh_token || refreshToken,
+							expires_in: tokenData.expires_in,
+							expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
 							token_type: tokenData.token_type,
 							message: '✅ Token refreshed! Update your credential with the new access_token.',
 						},
@@ -362,7 +350,7 @@ export class CanvaMcpAuth implements INodeType {
 				} else if (operation === 'info') {
 					const accessToken = credentials.accessToken;
 					const tokenExpiry = credentials.tokenExpiry || 0;
-					const now = (globalThis as any).Date.now();
+					const now = Date.now();
 					const isExpired = tokenExpiry > 0 && now > tokenExpiry;
 
 					returnData.push({

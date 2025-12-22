@@ -6,6 +6,9 @@ tsconfig.json
 .eslintrc.js
 gulpfile.js
 
+# MCP Proxy Server (CONFIDENCIAL - OAuth implementation)
+canva-mcp-proxy/
+
 # Private prompts and business logic (CONFIDENCIAL)
 prompts/
 
@@ -28,6 +31,12 @@ examples/
 # Git files
 .git/
 .gitignore
+
+# SSH keys (NEVER publish)
+.ssh/
+*.pem
+*.key
+id_rsa*
 
 # IDE and OS files
 .vscode/

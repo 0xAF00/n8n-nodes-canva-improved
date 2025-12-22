@@ -164,6 +164,14 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+### Support Development
+
+If this project has helped you save time or improve your workflows, consider supporting its development:
+
+**Solana Wallet**: `91Nk1HwpfQk5qno1LSB5GKw9hJ9yBXkpWqkTtmGMrphe`
+
+Your support helps maintain and improve this project. Thank you! 🙏
+
 ## 🔗 Links
 
 - [npm Package](https://www.npmjs.com/package/n8n-nodes-canva-improved)

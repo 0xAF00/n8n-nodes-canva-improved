@@ -373,6 +373,7 @@ export class CanvaMcpAuth implements INodeType {
 								access_token: tokenData.access_token,
 								refresh_token: tokenData.refresh_token,
 								expires_in: tokenData.expires_in,
+								expires_at: Date.now() + (tokenData.expires_in * 1000),
 								token_type: tokenData.token_type,
 								scope: tokenData.scope,
 								expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
@@ -447,7 +448,6 @@ export class CanvaMcpAuth implements INodeType {
 				}, 5 * 60 * 1000);
 			});
 
-		// Update credential with new token
 				// User needs to manually update the credential with these values
 				returnData.push({
 					json: {
@@ -455,12 +455,21 @@ export class CanvaMcpAuth implements INodeType {
 						access_token: tokenResult.access_token,
 						refresh_token: tokenResult.refresh_token,
 						expires_in: tokenResult.expires_in,
+						expires_at: tokenResult.expires_at,
 						expiry_timestamp: tokenResult.expiry_timestamp,
 						token_type: tokenResult.token_type,
 						scope: tokenResult.scope,
 						mcp_server_url: mcpServerUrl,
 						mcp_endpoint: mcpEndpoint,
-						message: '✅ Authentication successful! Copy the access_token and refresh_token to your Canva MCP Stdio credential.',
+						oauthTokenData: {
+							access_token: tokenResult.access_token,
+							refresh_token: tokenResult.refresh_token,
+							expires_in: tokenResult.expires_in,
+							expires_at: tokenResult.expires_at,
+							token_type: tokenResult.token_type,
+							scope: tokenResult.scope,
+						},
+						message: '✅ Authentication successful! Token will auto-refresh when needed.',
 					},
 					pairedItem: { item: i },
 				});				} else if (operation === 'refresh') {
@@ -531,9 +540,17 @@ export class CanvaMcpAuth implements INodeType {
 							access_token: tokenData.access_token,
 							refresh_token: tokenData.refresh_token || refreshToken,
 							expires_in: tokenData.expires_in,
+							expires_at: Date.now() + (tokenData.expires_in * 1000),
 							expiry_timestamp: Date.now() + (tokenData.expires_in * 1000),
 							token_type: tokenData.token_type,
-							message: '✅ Token refreshed! Update your credential with the new access_token.',
+							oauthTokenData: {
+								access_token: tokenData.access_token,
+								refresh_token: tokenData.refresh_token || refreshToken,
+								expires_in: tokenData.expires_in,
+								expires_at: Date.now() + (tokenData.expires_in * 1000),
+								token_type: tokenData.token_type,
+							},
+							message: '✅ Token refreshed successfully! Auto-refresh enabled.',
 						},
 						pairedItem: { item: i },
 					});

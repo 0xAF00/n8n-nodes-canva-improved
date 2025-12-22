@@ -4,6 +4,9 @@ dist
 !gulpfile.js
 !.eslintrc.js
 
+# MCP Proxy Server (CONFIDENCIAL - OAuth implementation)
+canva-mcp-proxy/
+
 # Private prompts and business logic (CONFIDENCIAL)
 prompts/
 
@@ -24,6 +27,12 @@ README-FULL.md
 test-callback.js
 *.tgz
 *.log
+
+# SSH keys and credentials (CONFIDENCIAL)
+.ssh/
+*.pem
+*.key
+id_rsa*
 
 # IDE and OS files
 .vscode/

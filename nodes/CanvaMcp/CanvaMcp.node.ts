@@ -272,6 +272,77 @@ export class CanvaMcp implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 		const operation = this.getNodeParameter('operation', 0) as string;
 
+		/**
+		 * Check if access token is expired or about to expire
+		 */
+		const isTokenExpired = (oauthTokenData: any): boolean => {
+			if (!oauthTokenData.expires_in) {
+				return false; // No expiry info, assume valid
+			}
+
+			const expiresAt = oauthTokenData.expires_at || 
+				(Date.now() + (oauthTokenData.expires_in * 1000));
+			
+			// Consider token expired if it expires in less than 5 minutes
+			const bufferTime = 5 * 60 * 1000; // 5 minutes
+			return (expiresAt - Date.now()) < bufferTime;
+		};
+
+		/**
+		 * Refresh OAuth2 access token using refresh token
+		 */
+		const refreshAccessToken = async (credentials: any): Promise<string> => {
+			const oauthTokenData = credentials.oauthTokenData as any;
+			
+			if (!oauthTokenData.refresh_token) {
+				throw new Error('No refresh token available. Please re-authenticate.');
+			}
+
+			this.logger.info('Access token expired or expiring soon, refreshing...');
+
+			const tokenUrl = credentials.accessTokenUrl || 'https://mcp.canva.com/oauth/token';
+			const clientId = credentials.clientId;
+			const clientSecret = credentials.clientSecret;
+
+			try {
+				const response = await this.helpers.request({
+					method: 'POST',
+					url: tokenUrl,
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+					},
+					form: {
+						grant_type: 'refresh_token',
+						refresh_token: oauthTokenData.refresh_token,
+					},
+					json: true,
+				});
+
+				// Update credentials with new token data
+				const newTokenData = {
+					access_token: response.access_token,
+					refresh_token: response.refresh_token || oauthTokenData.refresh_token,
+					expires_in: response.expires_in,
+					expires_at: Date.now() + (response.expires_in * 1000),
+					token_type: response.token_type || 'Bearer',
+				};
+
+				// Update the credential in n8n
+				credentials.oauthTokenData = newTokenData;
+				
+				this.logger.info('Access token refreshed successfully');
+				
+				return newTokenData.access_token;
+			} catch (error: any) {
+				this.logger.error('Failed to refresh access token', error);
+				throw new Error(
+					`Failed to refresh access token: ${error.message}\n` +
+					'Please re-authenticate by editing the credential and clicking "Connect my account"'
+				);
+			}
+		};
+
 		// Get MCP Server URL from credentials or use default
 		let mcpServerUrl = 'https://mcp.canva.com';
 		let accessToken: string | undefined;
@@ -283,7 +354,15 @@ export class CanvaMcp implements INodeType {
 			// Try to get token from credentials
 			if (credentials.oauthTokenData) {
 				const oauthData = credentials.oauthTokenData as any;
-				accessToken = oauthData.access_token;
+				
+				// Check if token is expired and refresh if needed
+				if (isTokenExpired(oauthData)) {
+					this.logger.info('Token expired or expiring soon, attempting refresh...');
+					accessToken = await refreshAccessToken(credentials);
+				} else {
+					accessToken = oauthData.access_token;
+					this.logger.info('Using valid access_token from credentials');
+				}
 			}
 		} catch (error) {
 			// Credentials not configured, will try to get token from input data
@@ -312,7 +391,6 @@ export class CanvaMcp implements INodeType {
 		}
 
 		// Log for debugging
-
 		this.logger.info(`Connecting to Canva MCP at ${mcpServerUrl}`);
 		this.logger.info(`Access token length: ${accessToken.length}`);
 

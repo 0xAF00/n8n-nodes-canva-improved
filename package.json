@@ -27,6 +27,10 @@
   "bugs": {
     "url": "https://github.com/0xAF00/n8n-nodes-canva-improved/issues"
   },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/0xAF00/n8n-nodes-canva-improved#support-development"
+  },
   "main": "index.js",
   "scripts": {
     "build": "tsc && gulp build:icons",
